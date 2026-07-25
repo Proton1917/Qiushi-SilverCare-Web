@@ -713,6 +713,7 @@
         eduModal.close();
       }
     });
+    if(eduModal) on(eduModal,'close', ()=>{ if(eduVideo) eduVideo.pause(); });
 
     /******** 规则与病种映射 ********/
     // 病种 → 规则Key
@@ -1345,9 +1346,11 @@
       }
       const energyMid = w * energyPerKg;
       const proteinMid = w * proteinPerKg;
+      const energyLow = Math.max(energyMid*0.92, 1200);
+      const proteinLow = Math.max(proteinMid*0.9, 50);
       return {
-        energy:[Math.max(energyMid*0.92, 1200), Math.min(energyMid*1.08, 2600)],
-        protein:[Math.max(proteinMid*0.9, 50), Math.min(proteinMid*1.1, 110)]
+        energy:[energyLow, Math.max(Math.min(energyMid*1.08, 2600), energyLow)],
+        protein:[proteinLow, Math.max(Math.min(proteinMid*1.1, 110), proteinLow)]
       };
     }
     function resolveMealTargets(mealLabel){
@@ -1406,7 +1409,7 @@
       const season = $('#season').value;
       const path = currentCarePath();
       const diseases = path==='chronic' ? selectedDiseaseKeys() : [];
-      const diseaseTeas = collectSuggestions(TEA_SUGGESTIONS, diseases).slice(0,2);
+      const diseaseTeas = diseases.length ? collectSuggestions(TEA_SUGGESTIONS, diseases).filter(item=> !TEA_SUGGESTIONS.GEN.some(g=>g.title===item.title)).slice(0,2) : [];
       const generalTeas = collectSuggestions(TEA_SUGGESTIONS, ['一般']).slice(0,2);
       const seasonalTeas = (SEASONAL_TEA_RECIPES[season] || []).slice(0,2);
       const lines = [`【${season}茶饮推荐】`];
@@ -1620,6 +1623,7 @@
         fitEl.textContent = '—';
         recipeEl.textContent = '请先在“慢病细分”中选择至少一种病种，再点击生成。';
         lastGeneratedMenus = [];
+        lastCompositions = [];
         return;
       }
       const avoidList = ($('#avoid').value||'').split(',').map(s=>s.trim()).filter(Boolean);
@@ -2036,7 +2040,10 @@ ${bks[1] ? explainMenu(bks[1]) : '（无备选菜品）'}
             ) + `\n附加信息：${prefSummary}`}
         ]
       };
-      const res = await fetch(base+'/chat/completions', { method:'POST', headers:{ 'Content-Type':'application/json','Authorization':'Bearer '+key }, body: JSON.stringify(payload) });
+      let res;
+      try{
+        res = await fetch(base+'/chat/completions', { method:'POST', headers:{ 'Content-Type':'application/json','Authorization':'Bearer '+key }, body: JSON.stringify(payload) });
+      }catch(err){ alert('调用失败：网络错误或接口不可达（'+err.message+'）'); return; }
       if(!res.ok){ const t = await res.text(); alert('调用失败：'+t); return; }
       const data = await res.json();
       const text = data.choices?.[0]?.message?.content || '(无输出)';
@@ -2119,7 +2126,7 @@ ${bks[1] ? explainMenu(bks[1]) : '（无备选菜品）'}
       const pref = $('#bfPref').value;
       let pool = BF_POOL.filter(item=> !avoid.some(k=> item.items.join(' ').includes(k)));
       if(diseases.includes('高血压')) pool = pool.filter(item=> !/咸菜|咸蛋|腐乳/.test(item.items.join(' ')));
-      if(diseases.includes('糖尿病')) pool = pool.filter(item=> !/糖|甜|白粥/.test(item.items.join(' ')));
+      if(diseases.includes('糖尿病')) pool = pool.filter(item=> !/糖|甜|白粥/.test(item.items.join(' ').replace(/无糖|低糖/g,'')));
       if(diseases.includes('高脂血症')) pool = pool.filter(item=> !/油条|酥饼/.test(item.items.join(' ')));
       if(diseases.includes('肾脏病/痛风')) pool = pool.filter(item=> !/海带丝|海鲜/.test(item.items.join(' ')));
       if(pref==='清淡'){
@@ -2128,9 +2135,11 @@ ${bks[1] ? explainMenu(bks[1]) : '（无备选菜品）'}
           return score(b.items.join(' ')) - score(a.items.join(' '));
         });
       }
-      const combos = (pool.length>=14 ? pool.slice(0,14) : pool.concat(BF_POOL).slice(0,14));
+      if(!pool.length){ bfResult.textContent = '（暂无可用组合，请放宽禁忌条件）'; return; }
+      const combos = [];
+      for(let i=0;i<14;i++) combos.push(pool[i % pool.length]);
       const out = combos.map((item,i)=> `D${String(i+1).padStart(2,'0')}｜${item.items.join(' + ')}`).join('\n');
-      bfResult.textContent = out || '（暂无可用组合，请放宽禁忌条件）';
+      bfResult.textContent = out;
     });
     on($('#btn-bf-copy'),'click', ()=> navigator.clipboard.writeText($('#bfResult').textContent||''));
 
