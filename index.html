@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>老年人健康食谱生成器 v2.1｜居民/食堂/配送（扩展菜库+参数化打分）</title>
-  <meta name="description" content="支持'食堂配餐/营养换算表'的扩展JSON菜库与参数化打分规则（盐/油/糖/嘌呤/GI）。三端原型：居民端、食堂端、配送端。">
+  <title>银龄膳食服务平台 v3.0｜今日供餐、居民档案与自炊推荐</title>
+  <meta name="description" content="面向社区老年居民、食堂和配送人员的膳食服务平台，提供长期居民档案、食堂今日 A/B/C 套餐选择、自炊食材换算、早餐参考和节气茶饮。">
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='16' fill='%23fff7f0'/%3E%3Ccircle cx='32' cy='34' r='18' fill='%23f97316'/%3E%3Cpath d='M24 30c10-12 24-9 26 4-10 1-19 0-26-4Z' fill='%2310b981'/%3E%3C/svg%3E">
   <style>
     :root{
@@ -107,6 +107,48 @@
     .bmi-card{ display:grid; grid-template-columns:130px 1fr; gap:16px; align-items:center; background:linear-gradient(135deg, rgba(255,244,229,.9), rgba(255,255,255,.95)); border:1px solid rgba(249,115,22,.18); border-radius:16px; padding:12px 14px; box-shadow:0 12px 24px rgba(249,115,22,.15); }
     .bmi-illustration{ width:120px; height:120px; display:flex; align-items:center; justify-content:center; }
     .bmi-illustration svg{ width:100%; height:100%; }
+    .resident-flow{ display:flex; gap:8px; flex-wrap:wrap; }
+    .resident-flow .tab{ min-height:44px; display:inline-flex; align-items:center; font-size:14px; }
+    .today-hero{ position:relative; overflow:hidden; display:grid; grid-template-columns:minmax(0,1.1fr) minmax(280px,.9fr); min-height:280px; border-radius:22px; border:1px solid rgba(249,115,22,.16); background:linear-gradient(125deg,rgba(255,247,237,.98),rgba(236,253,245,.9)); box-shadow:0 20px 44px rgba(249,115,22,.12); }
+    .today-hero-copy{ position:relative; z-index:1; display:flex; flex-direction:column; justify-content:center; gap:10px; padding:30px; }
+    .today-eyebrow{ color:#0f8a5f; font-weight:800; font-size:13px; letter-spacing:.08em; }
+    .today-hero h2{ margin:0; color:#74360e; font-size:clamp(26px,4vw,42px); line-height:1.12; }
+    .today-hero p{ margin:0; max-width:560px; color:#76513a; line-height:1.75; font-size:14px; }
+    .today-hero img{ width:100%; height:100%; min-height:280px; object-fit:cover; display:block; mask-image:linear-gradient(90deg,transparent 0%,#000 28%); }
+    .today-toolbar{ display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; padding:14px; border-radius:16px; background:rgba(255,255,255,.74); border:1px solid rgba(16,185,129,.18); }
+    .meal-switch{ display:flex; gap:8px; }
+    .meal-switch button{ padding:8px 15px; }
+    .meal-switch button.active{ outline:3px solid rgba(16,185,129,.2); background:linear-gradient(180deg,#34d399,#059669); }
+    .today-menu-grid{ display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:14px; }
+    .today-menu-card{ position:relative; display:flex; flex-direction:column; gap:12px; min-height:100%; padding:18px; border-radius:20px; border:1px solid rgba(249,115,22,.16); background:rgba(255,255,255,.92); box-shadow:0 16px 32px rgba(249,115,22,.1); }
+    .today-menu-card.is-caution{ border-color:rgba(245,158,11,.62); background:linear-gradient(180deg,rgba(255,251,235,.97),rgba(255,255,255,.92)); }
+    .today-menu-code{ width:44px; height:44px; display:grid; place-items:center; border-radius:14px; background:linear-gradient(145deg,#fb923c,#f97316); color:white; font-size:22px; font-weight:900; box-shadow:0 10px 18px rgba(249,115,22,.2); }
+    .today-menu-card h3{ margin:0; color:#74360e; font-size:19px; line-height:1.35; }
+    .menu-lines{ display:grid; gap:7px; color:#60422f; font-size:13px; line-height:1.55; }
+    .menu-lines span{ display:grid; grid-template-columns:48px 1fr; gap:5px; }
+    .menu-lines b{ color:#0f7a56; }
+    .nutrition-strip{ display:grid; grid-template-columns:repeat(4,1fr); gap:6px; }
+    .nutrition-strip span{ padding:7px 5px; border-radius:10px; background:#fff7ed; color:#8c4b1c; text-align:center; font-size:11px; }
+    .today-menu-card button{ margin-top:auto; width:100%; }
+    .compat-note{ min-height:38px; font-size:12px; color:#7c5b43; line-height:1.55; }
+    .profile-heading{ display:flex; align-items:flex-start; justify-content:space-between; gap:16px; flex-wrap:wrap; padding:16px; border-radius:18px; border:1px solid rgba(16,185,129,.2); background:linear-gradient(135deg,rgba(236,253,245,.92),rgba(255,247,237,.9)); }
+    .profile-heading h2{ margin:3px 0 5px; color:#74360e; font-size:22px; }
+    .profile-status{ padding:8px 12px; border-radius:999px; color:#8a4b1e; background:rgba(255,255,255,.78); border:1px solid rgba(249,115,22,.2); font-size:12px; }
+    .profile-status.saved{ color:#047857; border-color:rgba(16,185,129,.36); background:rgba(236,253,245,.9); }
+    .selfcook-lead{ display:grid; grid-template-columns:minmax(0,1fr) minmax(220px,.72fr); gap:14px; align-items:stretch; }
+    .selfcook-panel{ display:grid; gap:12px; padding:18px; border-radius:20px; border:1px solid rgba(16,185,129,.2); background:linear-gradient(135deg,rgba(255,255,255,.96),rgba(236,253,245,.82)); }
+    .selfcook-panel h2{ margin:0; color:#74360e; font-size:24px; }
+    .selfcook-photo{ width:100%; min-height:240px; height:100%; object-fit:cover; border-radius:20px; box-shadow:0 16px 30px rgba(74,51,33,.15); }
+    .ingredient-chips{ display:flex; flex-wrap:wrap; gap:7px; }
+    .ingredient-chip{ border:1px solid rgba(16,185,129,.22); background:rgba(255,255,255,.78); color:#0f6b4a; border-radius:999px; padding:5px 9px; font-size:11px; }
+    .portion-table-wrap{ overflow-x:auto; }
+    .legacy-planner{ border:1px dashed rgba(249,115,22,.28); border-radius:18px; padding:12px; background:rgba(255,247,237,.64); }
+    .legacy-planner > summary{ cursor:pointer; color:#9a4c14; font-weight:700; padding:5px; }
+    .legacy-planner[open] > summary{ margin-bottom:14px; }
+    .tea-catalog{ display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:10px; }
+    .tea-season{ padding:13px; border-radius:16px; background:rgba(255,255,255,.78); border:1px solid rgba(16,185,129,.16); }
+    .tea-season h3{ margin:0 0 8px; color:#74360e; }
+    .tea-season ul{ margin:0; padding-left:18px; color:#76513a; font-size:12px; line-height:1.65; }
     body.theme-night{ --bg:#1e1712; --panel:#2a2018; --card:#2a211b; --muted:#c9b29d; --text:#fff7ef; color-scheme:dark; background:linear-gradient(180deg,#16110e 0%,#2a1d15 48%,#12382b 100%); }
     body.theme-night header{ background:rgba(30,23,18,.82); border-bottom-color:rgba(249,115,22,.22); box-shadow:0 8px 22px rgba(0,0,0,.28); }
     body.theme-night .card{ background:linear-gradient(180deg, rgba(46,36,29,.96), rgba(34,27,22,.9)); border-color:rgba(249,115,22,.22); box-shadow:0 18px 45px rgba(0,0,0,.28); }
@@ -131,6 +173,13 @@
     body.theme-night .edu-dialog-copy ul{ color:#e8d2bf; }
     body.theme-night .badge-inline, body.theme-night .edu-type{ background:rgba(249,115,22,.18); border-color:rgba(249,115,22,.34); color:#fed7aa; }
     body.theme-night .table th, body.theme-night .table td{ color:#ead7c6; border-bottom-color:rgba(249,115,22,.22); }
+    body.theme-night .today-hero, body.theme-night .profile-heading, body.theme-night .selfcook-panel{ background:linear-gradient(135deg,rgba(49,38,30,.97),rgba(16,73,54,.62)); border-color:rgba(16,185,129,.28); }
+    body.theme-night .today-hero h2, body.theme-night .today-menu-card h3, body.theme-night .profile-heading h2, body.theme-night .selfcook-panel h2, body.theme-night .tea-season h3{ color:#ffe7cf; }
+    body.theme-night .today-hero p, body.theme-night .menu-lines, body.theme-night .compat-note, body.theme-night .tea-season ul{ color:#e3cdb9; }
+    body.theme-night .today-toolbar, body.theme-night .today-menu-card, body.theme-night .tea-season{ background:rgba(39,31,25,.94); border-color:rgba(249,115,22,.24); }
+    body.theme-night .today-menu-card.is-caution{ background:linear-gradient(180deg,rgba(82,58,24,.9),rgba(39,31,25,.95)); border-color:rgba(245,158,11,.56); }
+    body.theme-night .nutrition-strip span, body.theme-night .ingredient-chip, body.theme-night .profile-status{ background:rgba(48,37,29,.9); color:#f5d6bb; border-color:rgba(249,115,22,.25); }
+    body.theme-night .legacy-planner{ background:rgba(35,28,23,.72); border-color:rgba(249,115,22,.28); }
     @media (max-width: 980px){
       .bmi-card{ grid-template-columns:1fr; }
       .bmi-illustration{ margin:0 auto; }
@@ -139,16 +188,24 @@
       .meal-showcase{ grid-template-columns:repeat(2,minmax(0,1fr)); }
       .edu-card-grid{ grid-template-columns:1fr; }
       .edu-video-stage{ min-height:200px; }
+      .today-hero, .selfcook-lead{ grid-template-columns:1fr; }
+      .today-hero img{ max-height:260px; mask-image:linear-gradient(180deg,transparent 0%,#000 32%); order:-1; }
+      .today-menu-grid{ grid-template-columns:1fr; }
+      .tea-catalog{ grid-template-columns:repeat(2,minmax(0,1fr)); }
     }
     @media (max-width: 560px){
       .meal-showcase{ grid-template-columns:1fr; }
+      .today-hero-copy{ padding:22px; }
+      .nutrition-strip{ grid-template-columns:repeat(2,1fr); }
+      .tea-catalog{ grid-template-columns:1fr; }
+      .selfcook-photo{ display:none; }
     }
   </style>
 </head>
 <body>
   <header>
     <div class="wrap">
-      <h1>老年人健康食谱生成器 v2.1 <span class="badge">扩展菜库 & 参数化打分</span></h1>
+      <h1>银龄膳食服务平台 <span class="badge">今日供餐 · 档案长期保存</span></h1>
       <div class="tabs" id="tabs-app">
         <div class="tab active" data-tab="resident">居民端</div>
         <div class="tab" data-tab="canteen">食堂端</div>
@@ -162,16 +219,57 @@
     <!-- 居民端 -->
     <section class="card app-panel" id="panel-resident">
       <div class="hd">
-        <div class="tabs">
-          <div class="tab active" data-subtab="breakfast">早餐定制</div>
-          <div class="tab" data-subtab="meals" data-meal="午餐">午餐定制</div>
-          <div class="tab" data-subtab="meals" data-meal="晚餐">晚餐定制</div>
-          <div class="tab" data-subtab="tea">四季养生茶饮</div>
+        <div class="tabs resident-flow">
+          <div class="tab active" data-subtab="today">今日食堂供餐</div>
+          <div class="tab" data-subtab="profile">我的长期档案</div>
+          <div class="tab" data-subtab="selfcook">在家烧菜</div>
+          <div class="tab" data-subtab="breakfast">早餐参考</div>
+          <div class="tab" data-subtab="tea">节气茶饮</div>
         </div>
-        <div class="muted">第一步统一录入身高、体重与饮茶/水果偏好，系统自动计算 BMI 与盐油建议；随后在不同餐别中生成菜单并联动扣除摄入。</div>
+        <div class="muted">平时直接选择食堂公布的套餐；身高、体重、慢病和禁忌保存在“我的长期档案”；在家烧菜时再输入手边食材。</div>
       </div>
 
-      <div class="bd profile-panel" id="resident-profile">
+      <!-- 今日食堂供餐：居民默认首页 -->
+      <div class="bd subpanel" id="resident-today" data-display="grid">
+        <section class="today-hero" aria-labelledby="todayTitle">
+          <div class="today-hero-copy">
+            <span class="today-eyebrow" id="todayDateLabel">今日菜单</span>
+            <h2 id="todayTitle">食堂已经配好三套餐</h2>
+            <p>套餐按当季食材统一制作。保存过居民档案后，页面会提示需要留意的病种或禁忌；食堂仍按 A、B、C 三套标准餐集中备餐。</p>
+            <div class="ingredient-chips"><span class="ingredient-chip">统一菜单</span><span class="ingredient-chip">慢病提示</span><span class="ingredient-chip">一键报餐</span></div>
+          </div>
+          <img id="todayHeroImg" src="assets/meal-photos/meal-lunch-steamed-fish.png" alt="食堂今日套餐图例" loading="eager" decoding="async">
+        </section>
+        <div class="today-toolbar">
+          <div>
+            <strong id="todaySeasonLabel">当季供餐</strong>
+            <div class="muted" id="todayProfileHint">未保存居民档案，当前只展示通用配餐说明。</div>
+          </div>
+          <div class="meal-switch" aria-label="选择餐别">
+            <button type="button" class="active" data-today-meal="午餐">午餐</button>
+            <button type="button" class="secondary" data-today-meal="晚餐">晚餐</button>
+          </div>
+        </div>
+        <div class="today-menu-grid" id="todayMenuGrid" aria-live="polite"></div>
+        <div class="notice" id="todayChoiceStatus">还没有选择今天的套餐。选择后会保存到本机，并同步到食堂端演示订单。</div>
+      </div>
+
+      <!-- 长期居民档案 -->
+      <div class="bd subpanel profile-panel" id="resident-profile" style="display:none" data-display="grid">
+        <div class="profile-heading">
+          <div>
+            <div class="today-eyebrow">长期居民档案</div>
+            <h2>这些资料只需填写一次</h2>
+            <div class="muted">资料保存在当前浏览器，后续打开平台会自动带入。修改后请重新保存。</div>
+          </div>
+          <div class="profile-status" id="profileStatus">未保存</div>
+        </div>
+
+        <div class="row-3">
+          <div><label>居民姓名或称呼</label><input id="residentName" autocomplete="name" placeholder="如：王阿姨" /></div>
+          <div><label>社区 / 小区</label><input id="residentCommunity" placeholder="如：阳城贵都" /></div>
+          <div><label>联系电话（可留空）</label><input id="residentPhone" inputmode="tel" autocomplete="tel" placeholder="仅保存在本机" /></div>
+        </div>
         <div class="meal-showcase" aria-label="膳食图例展示">
           <figure class="meal-shot">
             <img src="assets/meal-photos/meal-breakfast-millet.png" alt="早餐图例：小米南瓜粥、蒸蛋、杂粮馒头、青菜与低糖水果" loading="eager" decoding="async">
@@ -200,7 +298,7 @@
             <div class="muted">卡片文字可直接用于居民端展示，右上角可打开完整科普讲解。</div>
           </div>
           <div class="edu-card-grid">
-            <article class="edu-card" tabindex="0" data-title="高血压的日常饮食" data-category="慢病饮食" data-video="科普视频：控盐、控油、选食材" data-video-src="assets/meal-photos/science-education-card.mp4" data-summary="高血压居民的日常餐食，关键不是“完全不吃盐”，而是把盐、酱油、咸菜、浓汤等钠来源一起算进去。推荐餐盘应以清淡烹调为基础，搭配足量蔬菜、全谷主食和鱼禽蛋豆等优质蛋白，让居民知道每一道菜为什么这样配。" data-points="看得见的盐要少放，看不见的钠也要留意：酱油、蚝油、咸菜、咸蛋、火腿、浓汤都应少用。|主菜优先清蒸、清炖、水煮或少油快炒，用葱姜蒜、醋、香菇、番茄等提升风味，减少重油重酱。|每餐搭配深色蔬菜和适量全谷杂豆主食，蛋白质优先选择鱼、去皮禽肉、鸡蛋、豆制品等清淡做法。">
+            <article class="edu-card" tabindex="0" data-title="高血压的日常饮食" data-category="慢病饮食" data-video="科普视频：控盐、控油、选食材" data-video-src="assets/meal-photos/science-education-card.mp4" data-summary="高血压居民要把盐、酱油、咸菜、浓汤等钠来源一起算入每日摄入。推荐餐盘以清淡烹调为基础，搭配足量蔬菜、全谷主食和鱼禽蛋豆等优质蛋白，并说明每道菜的搭配理由。" data-points="看得见的盐要少放，看不见的钠也要留意：酱油、蚝油、咸菜、咸蛋、火腿、浓汤都应少用。|主菜优先清蒸、清炖、水煮或少油快炒，用葱姜蒜、醋、香菇、番茄等提升风味，减少重油重酱。|每餐搭配深色蔬菜和适量全谷杂豆主食，蛋白质优先选择鱼、去皮禽肉、鸡蛋、豆制品等清淡做法。">
               <div class="edu-card-visual">
                 <img src="assets/meal-photos/meal-dinner-low-salt.png" alt="低盐晚餐科普图例" loading="lazy" decoding="async">
                 <span class="edu-type">慢病饮食</span>
@@ -213,7 +311,7 @@
               </div>
             </article>
 
-            <article class="edu-card" tabindex="0" data-title="山药：药食两用食材" data-category="药食两用品" data-video="科普讲解：食材来源、吃法、适用提醒" data-summary="山药是社区药膳中容易被老人接受的药食两用食材，口感软糯，适合蒸、炖、煮，也适合做成粥品或小份配菜。它含有较多淀粉，做慢病餐时应把山药当作一部分主食来安排，而不是额外无限量添加。" data-points="适合做成清蒸山药、山药小米粥、山药炖鸡片等软烂菜式，便于咀嚼。|不建议做成拔丝山药、甜品山药泥等高糖做法，糖尿病居民尤其要注意。|同餐已有米饭、馒头、粥时，加入山药应适当减少其他主食量。">
+            <article class="edu-card" tabindex="0" data-title="山药：药食两用食材" data-category="药食两用品" data-video="科普讲解：食材来源、吃法、适用提醒" data-summary="山药是社区药膳中容易被老人接受的药食两用食材，口感软糯，适合蒸、炖、煮，也适合做成粥品或小份配菜。它含有较多淀粉，做慢病餐时应把山药计入主食总量。" data-points="适合做成清蒸山药、山药小米粥、山药炖鸡片等软烂菜式，便于咀嚼。|拔丝山药、甜品山药泥含糖较高，糖尿病居民要控制。|同餐已有米饭、馒头、粥时，加入山药应适当减少其他主食量。">
               <div class="edu-card-visual">
                 <img src="assets/meal-photos/meal-breakfast-millet.png" alt="山药小米类早餐科普图例" loading="lazy" decoding="async">
                 <span class="edu-type">药食两用品</span>
@@ -226,7 +324,7 @@
               </div>
             </article>
 
-            <article class="edu-card" tabindex="0" data-title="清蒸鱼杂粮套餐" data-category="药膳菜肴" data-video="科普讲解：食材、做法、营养亮点" data-summary="清蒸鱼杂粮套餐适合作为午餐展示菜：鱼肉提供优质蛋白，杂粮饭增加膳食纤维，蔬菜和清汤补足餐盘结构。讲解时可突出“清蒸少油、不过度勾芡、少酱汁蘸料”，让居民理解套餐不是清淡无味，而是把风味和油盐控制在合适范围内。" data-points="鱼类建议采用清蒸或清炖，出锅后少量调味，避免厚重酱汁和反复浇油。|杂粮饭可与糙米、燕麦米、荞麦、玉米渣等搭配，比例按老人咀嚼能力调整。|配送时主菜、饭、蔬菜和汤分格盛放，减少汤汁浸泡，保证口感和控盐效果。">
+            <article class="edu-card" tabindex="0" data-title="清蒸鱼杂粮套餐" data-category="药膳菜肴" data-video="科普讲解：食材、做法、营养亮点" data-summary="清蒸鱼杂粮套餐适合作为午餐展示菜：鱼肉提供优质蛋白，杂粮饭增加膳食纤维，蔬菜和清汤补足餐盘结构。清蒸少油、少勾芡、少蘸料的做法能保留风味，也便于控制油盐。" data-points="鱼类建议采用清蒸或清炖，出锅后少量调味，避免厚重酱汁和反复浇油。|杂粮饭可与糙米、燕麦米、荞麦、玉米渣等搭配，比例按老人咀嚼能力调整。|配送时主菜、饭、蔬菜和汤分格盛放，减少汤汁浸泡，保证口感和控盐效果。">
               <div class="edu-card-visual">
                 <img src="assets/meal-photos/meal-lunch-steamed-fish.png" alt="清蒸鱼杂粮套餐科普图例" loading="lazy" decoding="async">
                 <span class="edu-type">药膳菜肴</span>
@@ -243,7 +341,7 @@
 
         <div class="row-3">
           <div>
-            <label>季节</label>
+            <label>当前季节（可手动调整）</label>
             <select id="season">
               <option value="春">春</option><option value="夏">夏</option><option value="秋">秋</option><option value="冬">冬</option>
             </select>
@@ -256,7 +354,7 @@
           </div>
           <div>
             <label>使用提示</label>
-            <div class="muted">以上参数会被午/晚餐共享，并驱动 BMI 评估、联动扣除与菜品筛选。</div>
+            <div class="muted">季节与蛋白偏好会用于食堂套餐提示和在家烧菜推荐。</div>
           </div>
         </div>
 
@@ -332,7 +430,7 @@
               <div class="chip active" data-v="healthy">健康人食谱</div>
               <div class="chip" data-v="chronic">慢性病食谱</div>
             </div>
-            <div class="muted">按BMI→偏好→路径→慢病细分的顺序配置。</div>
+            <div class="muted">慢病居民可继续选择具体病种。</div>
           </div>
         </div>
 
@@ -341,9 +439,9 @@
           <div class="chips" id="diseases">
             <div class="chip" data-v="高血压">高血压</div><div class="chip" data-v="糖尿病">糖尿病</div>
             <div class="chip" data-v="高脂血症">高脂血症</div><div class="chip" data-v="冠心病">冠心病</div>
-            <div class="chip" data-v="肾脏病/痛风">肾脏病/痛风</div>
+            <div class="chip" data-v="慢性肾病">慢性肾病</div><div class="chip" data-v="痛风">痛风</div>
           </div>
-          <div class="muted">仅在“慢性病食谱”路径下启用，影响油盐目标、禁忌、减糖/嘌呤等扣分阈值。</div>
+          <div class="muted">病种用于提示套餐适配情况，也会调整在家烧菜时的份量和食材提醒。</div>
         </div>
 
         <div class="row-3">
@@ -362,10 +460,16 @@
             <input type="text" id="avoid" placeholder="如：牛奶, 花生, 辛辣" />
           </div>
         </div>
+        <div class="btns">
+          <button id="btn-save-profile">保存居民档案</button>
+          <button class="secondary" id="btn-back-today">保存并查看今日套餐</button>
+          <button class="ghost" id="btn-clear-profile">清除本机档案</button>
+        </div>
+        <div class="notice">隐私说明：姓名、联系方式、健康信息和禁忌只保存在当前浏览器的本地存储中，页面不会自动上传这些资料。</div>
       </div>
 
       <!-- 早餐 -->
-      <div class="bd subpanel" id="resident-breakfast" data-display="grid">
+      <div class="bd subpanel" id="resident-breakfast" style="display:none" data-display="grid">
         <figure class="meal-visual">
           <img src="assets/meal-photos/meal-breakfast-millet.png" alt="早餐图例：小米南瓜粥、蒸蛋、杂粮馒头、青菜与低糖水果" loading="lazy" decoding="async">
           <figcaption class="meal-visual-copy">
@@ -381,7 +485,7 @@
           <div></div>
         </div>
         <div class="btns"><button id="btn-bf-generate">生成两周早餐</button><button class="secondary" id="btn-bf-copy">复制</button></div>
-        <div class="notice small">规则：HTN 忌咸菜/咸蛋/腐乳；DM 慎白粥/含糖饮；高脂慎油条/酥饼；CKD/痛风慎高嘌呤（海鲜/蘑菇等）。</div>
+        <div class="notice small">规则：高血压避开咸菜、咸蛋和腐乳；糖尿病慎选白粥与含糖饮；高脂血症慎选油条、酥饼；慢性肾病和痛风需结合医嘱核对海鲜、菌菇与豆类份量。</div>
         <div id="bfResult" class="recipe">（点击生成 14 天不重复搭配）</div>
 
         <div class="intake-bridge">
@@ -408,14 +512,32 @@
         </div>
       </div>
 
-      <!-- 午/晚餐 -->
-      <div class="bd subpanel" id="resident-meals" style="display:none" data-display="grid">
+      <!-- 在家烧菜 -->
+      <div class="bd subpanel" id="resident-selfcook" style="display:none" data-display="grid">
+        <div class="selfcook-lead">
+          <div class="selfcook-panel">
+            <div class="today-eyebrow">在家烧菜</div>
+            <h2>输入想吃或家里现有的食材</h2>
+            <p class="muted">平台会按食材类别补齐主食、蛋白质和蔬菜，并换算成克重与常见家庭份量。生成结果会参考已保存的慢病、禁忌和当季食材。</p>
+            <div class="row">
+              <div><label>餐别</label><select id="selfMealType"><option value="午餐">午餐</option><option value="晚餐">晚餐</option></select></div>
+              <div><label>想吃的食材</label><input id="selfIngredients" placeholder="如：鲈鱼、春笋、糙米" /></div>
+            </div>
+            <div class="ingredient-chips" id="seasonIngredientHints" aria-label="当季食材参考"></div>
+            <div class="btns"><button id="btn-selfcook-generate">换算并生成今日菜</button><button class="secondary" id="btn-selfcook-example">填入当季示例</button><button class="ghost" id="btn-selfcook-clear">清空</button></div>
+          </div>
+          <img class="selfcook-photo" src="assets/meal-photos/meal-dinner-low-salt.png" alt="居民在家烧菜的低盐套餐图例" loading="lazy" decoding="async">
+        </div>
+        <div id="selfcookResult" class="recipe">输入食材后，页面会给出建议菜名、每种食材用量、做法和慢病提醒。</div>
+
+        <details class="legacy-planner">
+          <summary>展开原有个性化 A/B 家庭食谱工具</summary>
         <figure class="meal-visual">
           <img id="mealHeroImg" src="assets/meal-photos/meal-lunch-steamed-fish.png" alt="午餐图例：清蒸鱼、杂粮饭、蔬菜、清汤与低糖水果" loading="lazy" decoding="async">
           <figcaption class="meal-visual-copy">
             <span class="meal-visual-kicker" id="mealHeroKicker">午餐图例</span>
             <strong class="meal-visual-title" id="mealHeroTitle">清蒸鱼杂粮套餐</strong>
-            <span class="meal-visual-desc" id="mealHeroDesc">主菜、配菜、汤品与水果组合展示，和 A/B 套餐生成逻辑保持一致。</span>
+            <span class="meal-visual-desc" id="mealHeroDesc">主菜、配菜、汤品与水果组合展示，供居民在家备餐时参考。</span>
             <span class="meal-visual-tags" id="mealHeroTags"><span>少油少盐</span><span>鱼类优先</span><span>营养均衡</span></span>
           </figcaption>
         </figure>
@@ -438,7 +560,7 @@
             <button class="ghost" id="btn-clear-meal-log">清空今日记录</button>
           </div>
           <div class="intake-small" id="meal-log-status">早餐：—｜午餐：—｜晚餐：—</div>
-          <div class="intake-small" id="imported-intake">尚未导入前餐摄入</div>
+          <div class="intake-small" id="imported-intake">未导入前餐摄入</div>
         </div>
 
         <div class="notice">
@@ -456,7 +578,7 @@
           </div>
         </div>
 
-        <div id="recipe" class="recipe">（点击生成，展示套餐A/B与分项得分；可复制到食堂端）</div>
+        <div id="recipe" class="recipe">（点击生成，展示家庭套餐 A/B 与分项得分）</div>
 
         <details>
           <summary>季节搭配参考</summary>
@@ -479,7 +601,8 @@
           <label>提示词</label>
           <textarea id="promptTpl" spellcheck="false">你是资深临床营养师，请为"老年人（65+）"生成【{{季节}}】【{{餐别}}】的健康食谱，适配：{{慢病}}，禁忌：{{禁忌}}。遵循：1) 全谷主食生重75—80g；2) 优先鱼类/海产蛋白熟重100—150g；3) 每餐加入护血糖/护血管食材；4) 做法清蒸/清炖/水煮/少油快炒；5) 食用油按分型（一般5—10g；高脂/冠心4—8g），食盐≤分型上限（如HTN≈0.6—0.7g/餐）；6) 输出菜名+克重+做法要点+为何适合该慢病+健康分与改良建议。</textarea>
           <div class="btns"><button id="btn-call">调用 API 生成</button><button class="secondary" id="btn-copy">复制结果</button></div>
-          <div class="notice small">说明：仅浏览器本地处理与存储你的 Key。</div>
+          <div class="notice small">说明：API Key 只保存在当前浏览器。</div>
+        </details>
         </details>
       </div>
 
@@ -504,27 +627,20 @@
             </div>
             <div class="recipe" id="teaResult">（点击生成茶饮推荐，将结合季节与慢病偏好输出）</div>
           </div>
-          <div class="row">
-            <div><h3>春（3—5月）</h3><ul class="small"><li>茉莉玫瑰醒春饮（玫瑰6g、茉莉6g、绿茶）</li><li>生姜紫苏御寒饮（生姜5片、紫苏10g、红糖）</li><li>蓝根牛蒡清润饮（板蓝根15g、牛蒡子10g、甘草10g）</li></ul></div>
-            <div><h3>夏（6—8月）</h3><ul class="small"><li>桂花酸梅生津饮（乌梅25g、山楂10g、陈皮3g、甘草4g）</li><li>佩兰荷叶化浊饮（佩兰10g、藿香10g、荷叶10g）</li><li>薏米绿豆利湿饮（生/熟薏米各30g、绿豆30g、玉米须30g）</li></ul></div>
-          </div>
-          <div class="row">
-            <div><h3>秋（9—11月）</h3><ul class="small"><li>山药雪梨滋肺饮（山药1根、雪梨1只、枸杞、冰糖）</li><li>生姜苏叶暖胃饮（生姜6片、紫苏叶6g、红糖）</li><li>桑枝橘络舒络饮（桑枝15g、橘络6g、丝瓜络6g）</li></ul></div>
-            <div><h3>冬（12—2月）</h3><ul class="small"><li>山楂决明消食饮（干山楂15g、决明子15g、熟普）</li><li>枸杞桑菊明目饮（桑叶15g、白菊15g、枸杞10g）</li><li>莲子红枣养心饮（莲子15g、莲子心1.5g、红枣5枚、桂圆3枚）</li></ul></div>
-          </div>
+          <div class="tea-catalog" id="teaCatalog" aria-label="二十四节气茶饮目录"></div>
         </div>
       </div>
     </section>
 
     <!-- 食堂端 -->
     <section class="card app-panel" id="panel-canteen" style="display:none">
-      <div class="hd"><div>食堂端 · 接单统计</div><div class="muted">粘贴"居民端"菜单，生成订单与病种份数 KPI。</div></div>
+      <div class="hd"><div>食堂端 · 固定菜单与接单统计</div><div class="muted">食堂先公布 A/B/C 标准套餐，再汇总居民选择与病种提示。</div></div>
       <div class="bd">
         <div class="row">
           <div class="grid">
-            <label>今日 A/B 菜单（来自居民端最近一次生成，可手动修改）</label>
-            <textarea id="canteen-menus" class="mono" placeholder="将居民端生成的 A/B 套餐粘贴至此"></textarea>
-            <div class="btns"><button id="btn-seed-orders">生成今日订单</button><button class="secondary" id="btn-clear-orders">清空</button></div>
+            <label>今日 A/B/C 固定菜单</label>
+            <textarea id="canteen-menus" class="mono" placeholder="页面会自动带入当季午餐与晚餐"></textarea>
+            <div class="btns"><button id="btn-seed-orders">生成演示订单</button><button class="secondary" id="btn-clear-orders">清空订单</button></div>
             <table class="table" id="order-table"><thead><tr><th>序号</th><th>姓名</th><th>联系方式</th><th>餐型</th><th>慢病标签</th><th>备注</th></tr></thead><tbody></tbody></table>
           </div>
           <div class="grid">
@@ -541,7 +657,7 @@
 
     <!-- 配送端 -->
     <section class="card app-panel" id="panel-delivery" style="display:none">
-      <div class="hd"><div>配送端 · 清单汇总</div><div class="muted">按小区/楼栋聚合 A/B 份数与特别备注。</div></div>
+      <div class="hd"><div>配送端 · 清单汇总</div><div class="muted">按小区或楼栋聚合 A/B/C 份数与特别备注。</div></div>
       <div class="bd">
         <div class="row">
           <div><label>按小区/楼栋汇总</label><select id="groupBy"><option value="小区">小区</option><option value="楼栋">楼栋</option></select></div>
@@ -578,7 +694,7 @@
             <div class="notice small" id="rules-summary">—</div>
           </div>
         </div>
-        <div class="small">免责声明：本工具用于一般饮食教育与家庭备餐参考，不替代医疗建议。慢性病、肾病、吞咽困难等人群请遵医嘱个性化调整。</div>
+        <div class="small">适用范围：本工具提供一般饮食教育与家庭备餐参考。慢性病、肾病、吞咽困难等人群按医生或营养师的要求调整。</div>
       </div>
     </section>
   </main>
@@ -718,7 +834,52 @@
     /******** 规则与病种映射 ********/
     // 病种 → 规则Key
     const DISEASE_KEY_MAP = {
-      '高血压':'HTN','糖尿病':'DM','高脂血症':'HLD','冠心病':'CHD','肾脏病/痛风':'CKD_Gout','一般':'GEN'
+      '高血压':'HTN','糖尿病':'DM','高脂血症':'HLD','冠心病':'CHD','慢性肾病':'CKD_Gout','痛风':'CKD_Gout','肾脏病/痛风':'CKD_Gout','一般':'GEN'
+    };
+
+    const PROFILE_STORAGE_KEY = 'silvercare_resident_profile_v3';
+    const CANTEEN_CHOICE_KEY = 'silvercare_canteen_choice_v1';
+
+    const SEASONAL_INGREDIENTS = {
+      '春': {
+        vegetables:['春笋','菠菜','荠菜','香椿','豌豆尖','韭菜','莴笋','芦笋','草菇','芹菜','马兰头','蚕豆','绿豆芽','蒜苗'],
+        proteins:['鲫鱼','鳊鱼','鲈鱼','河虾','基围虾','鸽肉','鹌鹑蛋'],
+        staples:['糙米','小米','燕麦','绿豆'],
+        seasonings:['陈皮','紫苏','薄荷','花椒芽']
+      },
+      '夏': {
+        vegetables:['苦瓜','扁豆','刀豆','丝瓜','冬瓜','黄瓜','苋菜','空心菜','茭白','西红柿','木耳菜','平菇','百合'],
+        proteins:['草鱼','鲢鱼','蛏子','蛤蜊','鸡胸肉','鸭肉'],
+        staples:['绿豆','赤小豆','糙米','薏米','玉米','鲜花生'],
+        seasonings:['荷叶','玉米须']
+      },
+      '秋': {
+        vegetables:['莲藕','山药','南瓜','芋艿','茭白','百合','板栗南瓜','秋葵'],
+        proteins:['鲈鱼','带鱼','鲳鱼','梭子蟹','鸭蛋','牛肉'],
+        staples:['黑米','糙米','荞麦','芡实','鲜板栗'],
+        seasonings:['桂花','陈皮','蜂蜜']
+      },
+      '冬': {
+        vegetables:['白萝卜','胡萝卜','大白菜','芥菜','草头','菠菜','花菜','香菇','金针菇','青菜'],
+        proteins:['鲫鱼','胖头鱼','鲈鱼','羊肉','鸽蛋','乌骨鸡'],
+        staples:['糯米','黑米','糙米','燕麦','赤小豆'],
+        seasonings:['花椒','八角','肉桂','陈皮']
+      },
+      '四季': {
+        vegetables:['紫菜','海带','洋葱','土豆','番茄','生菜','西兰花','蘑菇','黄瓜'],
+        proteins:['鸡胸肉','虾仁','鸡蛋','豆腐','豆浆','鸡翅','墨鱼'],
+        staples:['玉米','红薯','藜麦','黑麦','黑豆'],
+        seasonings:['生姜','葱','大蒜','香菜','黑胡椒','低钠盐','腐乳']
+      }
+    };
+
+    const DISEASE_FOOD_MATERIALS = {
+      '糖尿病':['山药','石斛','秋葵','茯苓','薏苡仁','葛根','桑叶','玉竹','百合','绿豆','黄精','枸杞子','芦根','白茅根','玉米须'],
+      '高脂血症':['陈皮','紫苏','桑叶','决明子','山楂','荷叶','莱菔子','葛根','枳椇子','薏苡仁','茯苓'],
+      '高血压':['菊花','桑叶','决明子','葛根','枳椇子','夏枯草','玉米须','荷叶','莱菔子','山楂','莲子','槐米','槐花'],
+      '冠心病':['菊花','山楂','决明子','百合','大枣','龙眼','莲子','黑芝麻','葛根','薤白','酸枣仁'],
+      '慢性肾病':['山药','茯苓','薏苡仁','芡实','莲子','白扁豆','黄芪','桑葚','赤小豆'],
+      '痛风':['薏苡仁','荷叶','玉米须','车前草','茯苓','陈皮','土茯苓','白扁豆','白扁豆花','赤小豆']
     };
 
     // 默认评分规则
@@ -823,49 +984,63 @@
 
     const TEA_SUGGESTIONS = {
       GEN: [
-        {title:'桂花陈皮舒缓饮', note:'桂花+陈皮，缓解油腻助消化。'},
-        {title:'黄芪红枣暖胃饮', note:'轻补气血，适合体力下降时饮用。'}
+        {title:'桂花陈皮饮', note:'桂花、陈皮组成的食堂常规搭配。'},
+        {title:'山楂决明消食茶', note:'山楂15g、决明子15g、熟普适量。'}
       ],
       HTN: [
-        {title:'山楂决明平压茶', note:'山楂+决明子，辅助软化血管。'},
-        {title:'芹菜荷叶利水茶', note:'清香利水，帮助平稳血压。'}
+        {title:'枸杞桑菊明目茶', note:'桑叶15g、白菊花15g、枸杞10g。'},
+        {title:'山楂荷叶决明饮', note:'采用高血压材料表中的山楂、荷叶、决明子。'}
       ],
       DM: [
-        {title:'桑叶苦荞控糖茶', note:'桑叶搭配苦荞，帮助缓释血糖。'},
-        {title:'黄连草本降糖茶', note:'搭配黄精/罗汉果，口感微甜低糖。'}
+        {title:'桑叶玉米须饮', note:'采用糖尿病材料表中的桑叶、玉米须，不加糖。'},
+        {title:'薏苡仁绿豆饮', note:'生熟薏苡仁与绿豆搭配，份量按食堂配方执行。'}
       ],
       HLD: [
-        {title:'决明菊花清脂茶', note:'帮助调节血脂，缓解视疲劳。'},
-        {title:'山楂洛神代谢茶', note:'酸甜解腻，促进脂质代谢。'}
+        {title:'山楂决明消食茶', note:'山楂15g、决明子15g、熟普适量。'},
+        {title:'陈皮荷叶饮', note:'采用高脂血症材料表中的陈皮与荷叶。'}
       ],
       CHD: [
-        {title:'麦冬丹参护心茶', note:'麦冬+丹参，兼顾润燥护心。'},
-        {title:'山楂桂花舒胸茶', note:'山楂解腻，桂花疏肝理气。'}
+        {title:'莲子红枣养心饮', note:'莲子15g、莲子心1.5g、红枣5枚、桂圆3枚。'},
+        {title:'山楂百合饮', note:'采用冠心病材料表中的山楂与百合。'}
       ],
       CKD_Gout: [
-        {title:'桑叶玉米须排浊茶', note:'清利湿热，注意控制饮量。'},
-        {title:'金银花蒲公英清肾茶', note:'金银花+蒲公英，帮助控制炎症。'}
+        {title:'玉米须陈皮饮', note:'采用痛风材料表中的玉米须与陈皮，用量需由食堂营养人员复核。'},
+        {title:'山药茯苓饮', note:'采用慢性肾病材料表中的山药与茯苓，用量需结合医嘱。'}
       ]
     };
 
-    const SEASONAL_TEA_RECIPES = {
-      '春': [
-        {title:'茉莉玫瑰醒春饮', detail:'玫瑰6g、茉莉6g、绿茶，芳香解郁。'},
-        {title:'生姜紫苏御寒饮', detail:'生姜5片、紫苏10g、红糖，驱寒暖胃。'}
-      ],
-      '夏': [
-        {title:'桂花酸梅生津饮', detail:'乌梅25g、山楂10g、陈皮3g、甘草4g，酸甜解暑。'},
-        {title:'薏米绿豆利湿饮', detail:'生/熟薏米各30g、绿豆30g、玉米须30g，利湿清热。'}
-      ],
-      '秋': [
-        {title:'山药雪梨滋肺饮', detail:'山药1根、雪梨1只、枸杞、冰糖，润燥护肺。'},
-        {title:'桑枝橘络舒络饮', detail:'桑枝15g、橘络6g、丝瓜络6g，舒筋通络。'}
-      ],
-      '冬': [
-        {title:'莲子红枣养心饮', detail:'莲子15g、莲子心1.5g、红枣5枚、桂圆3枚，温补养心。'},
-        {title:'枸杞桑菊明目饮', detail:'桑叶15g、白菊15g、枸杞10g，清肝明目。'}
-      ]
-    };
+    const SOLAR_TERM_TEA_RECIPES = [
+      {season:'春', term:'立春', title:'玫瑰茉莉醒春茶', detail:'玫瑰花6g、茉莉花6g、绿茶适量'},
+      {season:'春', term:'雨水', title:'生姜紫苏御寒茶', detail:'生姜5片、紫苏叶10g、红糖适量'},
+      {season:'春', term:'惊蛰', title:'蓝根牛蒡解毒茶', detail:'板蓝根15g、牛蒡子10g、生甘草10g'},
+      {season:'春', term:'春分', title:'韭籽枸杞起阳茶', detail:'韭菜籽10g、枸杞5g'},
+      {season:'春', term:'清明', title:'薄荷桑叶清利茶', detail:'薄荷3g、桑叶15g、绿茶适量'},
+      {season:'春', term:'谷雨', title:'荆芥银花透疹茶', detail:'金银花10g、荆芥9g、薄荷3g'},
+      {season:'夏', term:'立夏', title:'鸡子散花养胃茶', detail:'无菌蛋1枚、蛋壳细粉、麻油与白糖适量'},
+      {season:'夏', term:'小满', title:'双色地丁忆苦茶', detail:'蒲公英10g、紫花地丁6g'},
+      {season:'夏', term:'芒种', title:'桂花酸梅生津饮', detail:'乌梅25g、山楂10g、陈皮3g、甘草4g'},
+      {season:'夏', term:'夏至', title:'佩兰荷叶化浊饮', detail:'鲜佩兰、鲜藿香、鲜荷叶各10g'},
+      {season:'夏', term:'小暑', title:'薏米绿豆利湿饮', detail:'生熟薏苡仁各30g、绿豆300g、玉米须30g（批量配方）'},
+      {season:'夏', term:'大暑', title:'藿薷双香解暑饮', detail:'藿香10g、香薷10g、生姜3片'},
+      {season:'秋', term:'立秋', title:'芦根石斛润燥饮', detail:'鲜芦根60g、鲜麦冬20g、鲜石斛60g、鲜莲藕60g'},
+      {season:'秋', term:'处暑', title:'苁蓉陈皮通便茶', detail:'肉苁蓉10g、生白术30g、陈皮15g'},
+      {season:'秋', term:'白露', title:'山药雪梨滋肺饮', detail:'山药1根、雪梨1只、枸杞与冰糖适量'},
+      {season:'秋', term:'秋分', title:'生姜苏糖蟹伴茶', detail:'生姜6片、紫苏叶6g、红糖1块'},
+      {season:'秋', term:'寒露', title:'桑枝双络舒经饮', detail:'桑枝15g、橘络6g、丝瓜络6g'},
+      {season:'秋', term:'霜降', title:'干姜蜂蜜止咳饮', detail:'干姜6g、蜂蜜适量'},
+      {season:'冬', term:'立冬', title:'山楂决明消食茶', detail:'干山楂15g、生决明子15g、熟普适量'},
+      {season:'冬', term:'小雪', title:'红花人参通脉饮', detail:'生晒参5g、西红花0.5g'},
+      {season:'冬', term:'大雪', title:'枸杞桑菊明目茶', detail:'桑叶15g、白菊花15g、枸杞10g'},
+      {season:'冬', term:'冬至', title:'桑葚芝麻补肾饮', detail:'桑葚干30g、黑芝麻5g、大米30g'},
+      {season:'冬', term:'小寒', title:'葛花香橼解酒茶', detail:'葛花15g、香橼6g、绿茶适量'},
+      {season:'冬', term:'大寒', title:'莲子红枣养心饮', detail:'莲子15g、莲子心1.5g、红枣5枚、桂圆3枚'}
+    ];
+    const SEASONAL_TEA_RECIPES = Object.fromEntries(
+      ['春','夏','秋','冬'].map(season=>[
+        season,
+        SOLAR_TERM_TEA_RECIPES.filter(item=>item.season===season).map(item=>({title:`${item.term}｜${item.title}`, detail:item.detail}))
+      ])
+    );
 
     const FRUIT_SUGGESTIONS = {
       GEN: [
@@ -891,15 +1066,15 @@
 
     const DEFAULT_SIDE_DISHES = [
       {name:'蒜蓉西兰花（4g油）', tags:['高纤','护血管'], portion:{energy_kcal:115, protein_g:5.2, fat_g:5.0, carb_g:11, fiber_g:4.5, sugar_g:4.3, sodium_mg:190, salt_g:0.48}, oil:4, salt:0.48},
-      {name:'双菇豆腐煨', tags:['护血糖','高蛋白'], portion:{energy_kcal:135, protein_g:9.8, fat_g:4.2, carb_g:12, fiber_g:3.6, sugar_g:3.5, sodium_mg:220, salt_g:0.56}, oil:4, salt:0.56, excludeDiseases:['肾脏病/痛风']},
+      {name:'双菇豆腐煨', tags:['护血糖','高蛋白'], portion:{energy_kcal:135, protein_g:9.8, fat_g:4.2, carb_g:12, fiber_g:3.6, sugar_g:3.5, sodium_mg:220, salt_g:0.56}, oil:4, salt:0.56, excludeDiseases:['慢性肾病','痛风']},
       {name:'清炒油麦菜', tags:['低盐','高纤'], portion:{energy_kcal:96, protein_g:3.1, fat_g:3.5, carb_g:13, fiber_g:3.9, sugar_g:3.8, sodium_mg:150, salt_g:0.38}, oil:3.5, salt:0.38},
-      {name:'凉拌苦菊黑木耳', tags:['控糖','护血脂'], portion:{energy_kcal:88, protein_g:3.4, fat_g:2.6, carb_g:13, fiber_g:5.5, sugar_g:4.0, sodium_mg:140, salt_g:0.36}, oil:2.5, salt:0.36, excludeDiseases:['肾脏病/痛风']}
+      {name:'凉拌苦菊黑木耳', tags:['控糖','护血脂'], portion:{energy_kcal:88, protein_g:3.4, fat_g:2.6, carb_g:13, fiber_g:5.5, sugar_g:4.0, sodium_mg:140, salt_g:0.36}, oil:2.5, salt:0.36, excludeDiseases:['慢性肾病','痛风']}
     ];
 
     const DEFAULT_SOUPS = [
       {name:'山药枸杞清汤', tags:['滋补','护血管'], portion:{energy_kcal:85, protein_g:7.8, fat_g:2.4, carb_g:8, fiber_g:1.8, sugar_g:2.5, sodium_mg:160, salt_g:0.41}, oil:2, salt:0.41},
       {name:'番茄豆腐菌菇汤', tags:['控糖','轻盐'], portion:{energy_kcal:72, protein_g:6.5, fat_g:1.8, carb_g:9, fiber_g:2.2, sugar_g:3.4, sodium_mg:140, salt_g:0.36}, oil:1.5, salt:0.36},
-      {name:'玉米胡萝卜瘦肉汤', tags:['能量补充'], portion:{energy_kcal:105, protein_g:8.6, fat_g:3.1, carb_g:11, fiber_g:2.1, sugar_g:3.2, sodium_mg:210, salt_g:0.53}, oil:2.5, salt:0.53, excludeDiseases:['肾脏病/痛风']}
+      {name:'玉米胡萝卜瘦肉汤', tags:['能量补充'], portion:{energy_kcal:105, protein_g:8.6, fat_g:3.1, carb_g:11, fiber_g:2.1, sugar_g:3.2, sodium_mg:210, salt_g:0.53}, oil:2.5, salt:0.53, excludeDiseases:['慢性肾病','痛风']}
     ];
 
     const NUTRITION_GUIDELINES = {
@@ -911,6 +1086,84 @@
         '午餐': {energy:[520,660], protein:[26,36], saltMax:1.0, oil:[9,16]},
         '晚餐': {energy:[480,620], protein:[22,32], saltMax:0.9, oil:[7,14]}
       }
+    };
+
+    const TODAY_CANTEEN_MENUS = {
+      '春': {
+        '午餐': [
+          {code:'A', title:'清蒸鲈鱼春笋餐', main:'清蒸鲈鱼', staple:'糙米饭', side:'春笋菠菜', soup:'荠菜豆腐汤', nutrition:{energy:628,protein:32,salt:0.9,oil:12}, tags:['鱼类优先','当季春笋','少盐'], caution:['痛风'], ingredients:['鲈鱼','春笋','菠菜','荠菜','豆腐','糙米']},
+          {code:'B', title:'芹菜木耳鸡片餐', main:'芹菜木耳鸡片', staple:'燕麦饭', side:'清炒莴笋', soup:'番茄蛋花汤', nutrition:{energy:612,protein:31,salt:0.8,oil:11}, tags:['禽肉','高纤','清淡'], caution:[], ingredients:['芹菜','木耳','鸡胸肉','燕麦','莴笋','番茄','鸡蛋']},
+          {code:'C', title:'香椿蒸蛋豆腐餐', main:'香椿蒸蛋', staple:'小米糙米饭', side:'芦笋豆腐', soup:'紫菜清汤', nutrition:{energy:572,protein:26,salt:0.8,oil:10}, tags:['蛋奶豆类','软烂','春季食材'], caution:['慢性肾病'], ingredients:['香椿','鸡蛋','豆腐','小米','糙米','芦笋','紫菜']}
+        ],
+        '晚餐': [
+          {code:'A', title:'鳊鱼荠菜暖胃餐', main:'清蒸鳊鱼', staple:'小米饭', side:'荠菜豆腐', soup:'春笋萝卜汤', nutrition:{energy:548,protein:29,salt:0.8,oil:9}, tags:['鱼类','易咀嚼','晚餐'], caution:['痛风'], ingredients:['鳊鱼','荠菜','豆腐','小米','春笋','白萝卜']},
+          {code:'B', title:'鸽肉莴笋清炖餐', main:'莴笋清炖鸽肉', staple:'糙米饭', side:'蒜苗菠菜', soup:'番茄清汤', nutrition:{energy:576,protein:30,salt:0.8,oil:10}, tags:['禽肉','清炖','当季蔬菜'], caution:[], ingredients:['鸽肉','莴笋','糙米','蒜苗','菠菜','番茄']},
+          {code:'C', title:'芦笋豆腐杂粮餐', main:'芦笋豆腐煨', staple:'燕麦糙米饭', side:'清炒豌豆苗', soup:'紫菜蛋花汤', nutrition:{energy:526,protein:24,salt:0.8,oil:9}, tags:['豆制品','全谷物','晚餐清淡'], caution:['慢性肾病'], ingredients:['芦笋','豆腐','燕麦','糙米','豌豆苗','紫菜','鸡蛋']}
+        ]
+      },
+      '夏': {
+        '午餐': [
+          {code:'A', title:'苦瓜鸡胸糙米餐', main:'苦瓜鸡胸木耳', staple:'糙米饭', side:'清炒苋菜', soup:'冬瓜番茄汤', nutrition:{energy:616,protein:33,salt:0.8,oil:11}, tags:['鸡胸肉','苦瓜','少油'], caution:[], ingredients:['苦瓜','鸡胸肉','木耳','糙米','苋菜','冬瓜','番茄']},
+          {code:'B', title:'清炖鲢鱼薏米餐', main:'冬瓜清炖鲢鱼', staple:'薏米糙米饭', side:'蒜蓉空心菜', soup:'丝瓜蛋花汤', nutrition:{energy:638,protein:32,salt:0.9,oil:11}, tags:['鱼类','冬瓜','清炖'], caution:['痛风'], ingredients:['鲢鱼','冬瓜','薏米','糙米','空心菜','丝瓜','鸡蛋']},
+          {code:'C', title:'番茄豆腐玉米餐', main:'番茄豆腐青菜煮', staple:'玉米糙米饭', side:'凉拌黄瓜', soup:'百合冬瓜汤', nutrition:{energy:566,protein:25,salt:0.8,oil:10}, tags:['豆制品','高纤','夏季蔬菜'], caution:['慢性肾病'], ingredients:['番茄','豆腐','青菜','玉米','糙米','黄瓜','百合','冬瓜']}
+        ],
+        '晚餐': [
+          {code:'A', title:'草鱼丝瓜清蒸餐', main:'清蒸草鱼', staple:'玉米饭', side:'丝瓜番茄', soup:'冬瓜清汤', nutrition:{energy:558,protein:29,salt:0.8,oil:9}, tags:['鱼类','清蒸','清爽'], caution:['痛风'], ingredients:['草鱼','玉米','丝瓜','番茄','冬瓜']},
+          {code:'B', title:'鸭肉扁豆清炖餐', main:'扁豆清炖鸭肉', staple:'糙米饭', side:'蒜蓉苋菜', soup:'黄瓜蛋花汤', nutrition:{energy:584,protein:29,salt:0.8,oil:10}, tags:['鸭肉','清炖','夏季食材'], caution:[], ingredients:['鸭肉','扁豆','糙米','苋菜','黄瓜','鸡蛋']},
+          {code:'C', title:'百合豆腐薏米餐', main:'百合豆腐煨', staple:'薏米糙米饭', side:'清炒空心菜', soup:'番茄冬瓜汤', nutrition:{energy:532,protein:24,salt:0.7,oil:9}, tags:['豆制品','少盐','晚餐'], caution:['慢性肾病'], ingredients:['百合','豆腐','薏米','糙米','空心菜','番茄','冬瓜']}
+        ]
+      },
+      '秋': {
+        '午餐': [
+          {code:'A', title:'清蒸鲈鱼莲藕餐', main:'清蒸鲈鱼', staple:'黑米饭', side:'莲藕秋葵', soup:'山药百合汤', nutrition:{energy:632,protein:32,salt:0.9,oil:11}, tags:['鱼类','秋季根茎','清蒸'], caution:['痛风'], ingredients:['鲈鱼','黑米','莲藕','秋葵','山药','百合']},
+          {code:'B', title:'山药秋葵牛肉餐', main:'山药秋葵牛肉片', staple:'荞麦饭', side:'清蒸南瓜', soup:'茭白蛋花汤', nutrition:{energy:648,protein:33,salt:0.9,oil:12}, tags:['牛肉','山药','少油快炒'], caution:[], ingredients:['山药','秋葵','牛肉','荞麦','南瓜','茭白','鸡蛋']},
+          {code:'C', title:'百合豆腐芡实餐', main:'百合豆腐煨', staple:'芡实糙米饭', side:'清炒秋葵', soup:'莲藕清汤', nutrition:{energy:568,protein:25,salt:0.8,oil:10}, tags:['豆制品','全谷杂粮','秋季食材'], caution:['慢性肾病'], ingredients:['百合','豆腐','芡实','糙米','秋葵','莲藕']}
+        ],
+        '晚餐': [
+          {code:'A', title:'带鱼山药清蒸餐', main:'清蒸带鱼段', staple:'糙米饭', side:'山药秋葵', soup:'百合莲藕汤', nutrition:{energy:574,protein:30,salt:0.8,oil:10}, tags:['鱼类','清蒸','秋季根茎'], caution:['痛风'], ingredients:['带鱼','糙米','山药','秋葵','百合','莲藕']},
+          {code:'B', title:'牛肉南瓜荞麦餐', main:'南瓜牛肉片', staple:'荞麦饭', side:'清炒茭白', soup:'山药清汤', nutrition:{energy:588,protein:29,salt:0.8,oil:10}, tags:['牛肉','荞麦','晚餐'], caution:[], ingredients:['牛肉','南瓜','荞麦','茭白','山药']},
+          {code:'C', title:'芋艿蒸蛋黑米餐', main:'芋艿蒸蛋', staple:'黑米饭', side:'凉拌秋葵', soup:'莲藕百合汤', nutrition:{energy:536,protein:24,salt:0.7,oil:9}, tags:['蛋类','软烂','少盐'], caution:['糖尿病'], ingredients:['芋艿','鸡蛋','黑米','秋葵','莲藕','百合']}
+        ]
+      },
+      '冬': {
+        '午餐': [
+          {code:'A', title:'萝卜鲫鱼燕麦餐', main:'萝卜鲫鱼清炖', staple:'燕麦饭', side:'清炒菠菜', soup:'大白菜豆腐汤', nutrition:{energy:626,protein:31,salt:0.9,oil:11}, tags:['鱼类','清炖','冬季食材'], caution:['痛风'], ingredients:['白萝卜','鲫鱼','燕麦','菠菜','大白菜','豆腐']},
+          {code:'B', title:'乌骨鸡香菇黑米餐', main:'乌骨鸡香菇清炖', staple:'黑米饭', side:'胡萝卜花菜', soup:'青菜蛋花汤', nutrition:{energy:646,protein:34,salt:0.9,oil:12}, tags:['禽肉','清炖','高蛋白'], caution:['痛风'], ingredients:['乌骨鸡','香菇','黑米','胡萝卜','花菜','青菜','鸡蛋']},
+          {code:'C', title:'白菜豆腐赤小豆餐', main:'大白菜豆腐煨', staple:'赤小豆糙米饭', side:'清炒草头', soup:'白萝卜清汤', nutrition:{energy:562,protein:25,salt:0.8,oil:10}, tags:['豆制品','杂豆','冬季蔬菜'], caution:['慢性肾病','痛风'], ingredients:['大白菜','豆腐','赤小豆','糙米','草头','白萝卜']}
+        ],
+        '晚餐': [
+          {code:'A', title:'鲈鱼白菜清蒸餐', main:'清蒸鲈鱼', staple:'燕麦糙米饭', side:'大白菜胡萝卜', soup:'白萝卜清汤', nutrition:{energy:552,protein:29,salt:0.8,oil:9}, tags:['鱼类','清蒸','易消化'], caution:['痛风'], ingredients:['鲈鱼','燕麦','糙米','大白菜','胡萝卜','白萝卜']},
+          {code:'B', title:'乌骨鸡菠菜暖胃餐', main:'乌骨鸡菠菜清炖', staple:'黑米饭', side:'清炒花菜', soup:'青菜豆腐汤', nutrition:{energy:578,protein:31,salt:0.8,oil:10}, tags:['禽肉','清炖','晚餐'], caution:[], ingredients:['乌骨鸡','菠菜','黑米','花菜','青菜','豆腐']},
+          {code:'C', title:'萝卜豆腐燕麦餐', main:'白萝卜豆腐煨', staple:'燕麦饭', side:'清炒青菜', soup:'胡萝卜蛋花汤', nutrition:{energy:524,protein:23,salt:0.7,oil:9}, tags:['豆制品','少盐','软烂'], caution:['慢性肾病'], ingredients:['白萝卜','豆腐','燕麦','青菜','胡萝卜','鸡蛋']}
+        ]
+      }
+    };
+
+    const INGREDIENT_PORTION_OVERRIDES = {
+      '燕麦':{category:'staple', grams:50, measure:'生燕麦约3平勺，煮后约1中碗', basis:'生重'},
+      '糙米':{category:'staple', grams:75, measure:'生糙米约5平勺，煮后约1小碗', basis:'生重'},
+      '小米':{category:'staple', grams:50, measure:'生小米约3平勺，煮后约1中碗', basis:'生重'},
+      '荞麦':{category:'staple', grams:80, measure:'生重约80g，煮后约1小碗', basis:'生重'},
+      '黑米':{category:'staple', grams:75, measure:'生重约75g，煮后约1小碗', basis:'生重'},
+      '薏米':{category:'staple', grams:40, measure:'与糙米搭配，约2至3平勺', basis:'生重'},
+      '玉米':{category:'staple', grams:100, measure:'中等玉米约半根至1根', basis:'可食部'},
+      '红薯':{category:'staple', grams:100, measure:'约半个拳头大小，替代部分米饭', basis:'熟重'},
+      '山药':{category:'staple', grams:80, measure:'约半个拳头大小，同餐减少其他主食', basis:'可食部'},
+      '土豆':{category:'staple', grams:100, measure:'中等土豆约半个，同餐减少其他主食', basis:'可食部'},
+      '鲈鱼':{category:'protein', grams:100, measure:'去骨鱼肉约1个手掌心大小', basis:'熟重'},
+      '鲫鱼':{category:'protein', grams:100, measure:'去骨鱼肉约1个手掌心大小', basis:'熟重'},
+      '鳊鱼':{category:'protein', grams:100, measure:'去骨鱼肉约1个手掌心大小', basis:'熟重'},
+      '草鱼':{category:'protein', grams:100, measure:'去骨鱼肉约1个手掌心大小', basis:'熟重'},
+      '鲢鱼':{category:'protein', grams:100, measure:'去骨鱼肉约1个手掌心大小', basis:'熟重'},
+      '带鱼':{category:'protein', grams:100, measure:'去骨鱼肉约1个手掌心大小', basis:'熟重'},
+      '鸡胸肉':{category:'protein', grams:100, measure:'熟肉约1个手掌心大小', basis:'熟重'},
+      '牛肉':{category:'protein', grams:100, measure:'熟肉约1个手掌心大小', basis:'熟重'},
+      '鸭肉':{category:'protein', grams:100, measure:'去皮熟肉约1个手掌心大小', basis:'熟重'},
+      '乌骨鸡':{category:'protein', grams:100, measure:'去皮熟肉约1个手掌心大小', basis:'熟重'},
+      '虾仁':{category:'protein', grams:80, measure:'约6至8只中等虾的去壳虾肉', basis:'熟重'},
+      '河虾':{category:'protein', grams:80, measure:'约6至8只中等虾的去壳虾肉', basis:'熟重'},
+      '鸡蛋':{category:'protein', grams:50, measure:'中等鸡蛋1个，可蒸成1小碗蛋羹', basis:'可食部'},
+      '豆腐':{category:'protein', grams:100, measure:'约1块手掌心大小的小豆腐', basis:'熟重'}
     };
 
     // 可编辑的全局状态
@@ -950,14 +1203,29 @@
     const mealHeroTitle = $('#mealHeroTitle');
     const mealHeroDesc = $('#mealHeroDesc');
     const mealHeroTags = $('#mealHeroTags');
+    const residentNameInput = $('#residentName');
+    const residentCommunityInput = $('#residentCommunity');
+    const residentPhoneInput = $('#residentPhone');
+    const profileStatusEl = $('#profileStatus');
+    const todayMenuGrid = $('#todayMenuGrid');
+    const todayChoiceStatus = $('#todayChoiceStatus');
+    const todayProfileHint = $('#todayProfileHint');
+    const todaySeasonLabel = $('#todaySeasonLabel');
+    const todayDateLabel = $('#todayDateLabel');
+    const todayHeroImg = $('#todayHeroImg');
+    const selfIngredientsInput = $('#selfIngredients');
+    const selfMealTypeInput = $('#selfMealType');
+    const selfcookResult = $('#selfcookResult');
+    const seasonIngredientHints = $('#seasonIngredientHints');
     let currentMealType = '午餐';
+    let currentTodayMeal = '午餐';
     const MEAL_VISUALS = {
       '午餐': {
         src: 'assets/meal-photos/meal-lunch-steamed-fish.png',
         alt: '午餐图例：清蒸鱼、杂粮饭、蔬菜、清汤与低糖水果',
         kicker: '午餐图例',
         title: '清蒸鱼杂粮套餐',
-        desc: '主菜、配菜、汤品与水果组合展示，和 A/B 套餐生成逻辑保持一致。',
+        desc: '主菜、配菜、汤品与水果组合展示，供居民在家备餐时参考。',
         tags: ['少油少盐','鱼类优先','营养均衡']
       },
       '晚餐': {
@@ -1041,6 +1309,300 @@
     bindSingleChoice(fruitChips);
     function getTeaPref(){ const chip = teaChips.querySelector('.chip.active'); return chip? chip.dataset.v : 'unknown'; }
     function getFruitPref(){ const chip = fruitChips.querySelector('.chip.active'); return chip? chip.dataset.v : 'unknown'; }
+
+    function escapeHtml(value){
+      return String(value ?? '').replace(/[&<>'"]/g, char=>({
+        '&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'
+      })[char]);
+    }
+    function defaultSeasonForDate(date=new Date()){
+      const month = date.getMonth()+1;
+      if(month>=3 && month<=5) return '春';
+      if(month>=6 && month<=8) return '夏';
+      if(month>=9 && month<=11) return '秋';
+      return '冬';
+    }
+    function setSingleChip(container, value){
+      container.querySelectorAll('.chip').forEach(chip=>chip.classList.toggle('active', chip.dataset.v===value));
+    }
+    function collectResidentProfile(){
+      return {
+        version:3,
+        name:(residentNameInput.value||'').trim(),
+        community:(residentCommunityInput.value||'').trim(),
+        phone:(residentPhoneInput.value||'').trim(),
+        season:$('#season').value,
+        proteinPref:$('#proteinPref').value,
+        height:heightInput.value,
+        weight:weightInput.value,
+        teaPref:getTeaPref(),
+        fruitPref:getFruitPref(),
+        carePath:currentCarePath(),
+        diseases:selectedDiseaseKeys(),
+        salt:saltInput.value,
+        oil:oilInput.value,
+        avoid:($('#avoid').value||'').trim(),
+        savedAt:new Date().toISOString()
+      };
+    }
+    function readResidentProfile(){
+      try{
+        const profile = JSON.parse(localStorage.getItem(PROFILE_STORAGE_KEY)||'null');
+        return profile && profile.version===3 ? profile : null;
+      }catch(_err){ return null; }
+    }
+    function updateProfileStatus(profile){
+      if(!profile){
+        profileStatusEl.textContent = '未保存';
+        profileStatusEl.classList.remove('saved');
+        return;
+      }
+      const when = new Date(profile.savedAt);
+      profileStatusEl.textContent = `已保存｜${Number.isNaN(when.getTime())?'本机':when.toLocaleString('zh-CN',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'})}`;
+      profileStatusEl.classList.add('saved');
+    }
+    function applyResidentProfile(profile){
+      if(!profile){
+        $('#season').value = defaultSeasonForDate();
+        updateProfileStatus(null);
+        return;
+      }
+      residentNameInput.value = profile.name||'';
+      residentCommunityInput.value = profile.community||'';
+      residentPhoneInput.value = profile.phone||'';
+      $('#season').value = defaultSeasonForDate();
+      $('#proteinPref').value = profile.proteinPref || '鱼类优先';
+      heightInput.value = profile.height||'';
+      weightInput.value = profile.weight||'';
+      setSingleChip(teaChips, profile.teaPref);
+      setSingleChip(fruitChips, profile.fruitPref);
+      setSingleChip(carePathChips, profile.carePath || 'healthy');
+      diseaseChips.querySelectorAll('.chip').forEach(chip=>chip.classList.toggle('active',(profile.diseases||[]).includes(chip.dataset.v)));
+      $('#avoid').value = profile.avoid||'';
+      syncDiseaseSection();
+      if(profile.salt) saltInput.value = profile.salt;
+      if(profile.oil) oilInput.value = profile.oil;
+      refreshBmi();
+      updateProfileStatus(profile);
+    }
+    function saveResidentProfile(){
+      const profile = collectResidentProfile();
+      if(!profile.height || !profile.weight){
+        alert('请填写身高和体重，便于计算 BMI 与建议份量。');
+        return null;
+      }
+      if(profile.carePath==='chronic' && !profile.diseases.length){
+        alert('已选择慢性病食谱，请至少勾选一个病种。');
+        return null;
+      }
+      localStorage.setItem(PROFILE_STORAGE_KEY,JSON.stringify(profile));
+      updateProfileStatus(profile);
+      renderTodayMenus();
+      renderSeasonIngredientHints();
+      return profile;
+    }
+    function showResidentSubtab(name){
+      const tab = document.querySelector(`[data-subtab="${name}"]`);
+      if(tab) tab.click();
+    }
+
+    function profileContext(){
+      const saved = readResidentProfile();
+      return saved || collectResidentProfile();
+    }
+    function evaluateCanteenMenu(menu, profile){
+      const warnings=[];
+      const diseases = profile.carePath==='chronic' ? (profile.diseases||[]) : [];
+      const diseaseHits = diseases.filter(disease=>(menu.caution||[]).includes(disease));
+      if(diseaseHits.length) warnings.push(`${diseaseHits.join('、')}居民请先咨询食堂营养人员`);
+      const avoid = String(profile.avoid||'').split(/[，,、]/).map(item=>item.trim()).filter(Boolean);
+      const avoidHits = avoid.filter(term=>(menu.ingredients||[]).some(item=>item.includes(term)||term.includes(item)));
+      if(avoidHits.length) warnings.push(`含档案禁忌：${avoidHits.join('、')}`);
+      return warnings;
+    }
+    function fixedMenusText(){
+      const season = $('#season').value || defaultSeasonForDate();
+      const lines=[`【${new Date().toLocaleDateString('zh-CN')} 食堂固定菜单｜${season}季】`];
+      ['午餐','晚餐'].forEach(meal=>{
+        lines.push(`\n${meal}`);
+        (TODAY_CANTEEN_MENUS[season]?.[meal]||[]).forEach(menu=>{
+          lines.push(`${menu.code}套餐｜${menu.title}：${menu.main} + ${menu.staple} + ${menu.side} + ${menu.soup}`);
+        });
+      });
+      const tea=getCurrentSolarTermTea();
+      if(tea) lines.push(`\n本期茶饮｜${tea.term}·${tea.title}（${tea.detail}）`);
+      return lines.join('\n');
+    }
+    function syncFixedMenusToCanteen(){
+      const textarea=$('#canteen-menus');
+      if(textarea) textarea.value=fixedMenusText();
+    }
+    function renderTodayChoice(){
+      let choice=null;
+      try{ choice=JSON.parse(localStorage.getItem(CANTEEN_CHOICE_KEY)||'null'); }catch(_err){}
+      if(choice && choice.date===todayKey()){
+        todayChoiceStatus.innerHTML = `<strong>今天已选择：</strong>${escapeHtml(choice.meal)} ${escapeHtml(choice.code)}套餐｜${escapeHtml(choice.title)}。再次选择会更新记录。`;
+      }else{
+        todayChoiceStatus.textContent='还没有选择今天的套餐。选择后会保存到本机，并同步到食堂端演示订单。';
+      }
+    }
+    function renderTodayMenus(){
+      const profile=profileContext();
+      const season=$('#season').value || defaultSeasonForDate();
+      const menus=TODAY_CANTEEN_MENUS[season]?.[currentTodayMeal]||[];
+      const date=new Date();
+      todayDateLabel.textContent=`${date.toLocaleDateString('zh-CN',{month:'long',day:'numeric',weekday:'long'})}｜${currentTodayMeal}`;
+      todaySeasonLabel.textContent=`${season}季食堂固定 ${currentTodayMeal}｜A / B / C 三选一`;
+      todayHeroImg.src=currentTodayMeal==='午餐'?'assets/meal-photos/meal-lunch-steamed-fish.png':'assets/meal-photos/meal-dinner-low-salt.png';
+      todayHeroImg.alt=`食堂今日${currentTodayMeal}套餐图例`;
+      const saved=readResidentProfile();
+      todayProfileHint.textContent=saved
+        ? `${saved.name||'居民'}的档案已载入：${saved.carePath==='chronic'?(saved.diseases||[]).join('、')||'慢病未细分':'普通膳食'}${saved.avoid?`；禁忌 ${saved.avoid}`:''}`
+        : '未保存居民档案，当前只展示通用配餐说明。';
+      todayMenuGrid.innerHTML=menus.map(menu=>{
+        const warnings=evaluateCanteenMenu(menu,profile);
+        const n=menu.nutrition;
+        return `<article class="today-menu-card${warnings.length?' is-caution':''}">
+          <div class="today-menu-code">${menu.code}</div>
+          <h3>${escapeHtml(menu.title)}</h3>
+          <div class="menu-lines">
+            <span><b>主菜</b>${escapeHtml(menu.main)}</span><span><b>主食</b>${escapeHtml(menu.staple)}</span>
+            <span><b>配菜</b>${escapeHtml(menu.side)}</span><span><b>汤品</b>${escapeHtml(menu.soup)}</span>
+          </div>
+          <div class="ingredient-chips">${menu.tags.map(tag=>`<span class="ingredient-chip">${escapeHtml(tag)}</span>`).join('')}</div>
+          <div class="nutrition-strip"><span>${n.energy} kcal</span><span>蛋白 ${n.protein}g</span><span>盐 ${n.salt}g</span><span>油 ${n.oil}g</span></div>
+          <div class="compat-note">${warnings.length?`⚠ ${escapeHtml(warnings.join('；'))}`:'与当前档案未发现直接冲突，可按个人咀嚼和进食情况选择。'}</div>
+          <button type="button" data-choose-menu="${menu.code}">选择 ${menu.code} 套餐</button>
+        </article>`;
+      }).join('');
+      renderTodayChoice();
+      syncFixedMenusToCanteen();
+    }
+    function chooseTodayMenu(code){
+      const season=$('#season').value || defaultSeasonForDate();
+      const menu=(TODAY_CANTEEN_MENUS[season]?.[currentTodayMeal]||[]).find(item=>item.code===code);
+      if(!menu) return;
+      const profile=profileContext();
+      const warnings=evaluateCanteenMenu(menu,profile);
+      if(warnings.length && !confirm(`${warnings.join('；')}。仍要选择这份套餐吗？`)) return;
+      const choice={date:todayKey(),meal:currentTodayMeal,code:menu.code,title:menu.title,season,profileName:profile.name||'居民',diseases:profile.diseases||[]};
+      localStorage.setItem(CANTEEN_CHOICE_KEY,JSON.stringify(choice));
+      renderTodayChoice();
+      upsertResidentOrder(choice);
+    }
+
+    const SOLAR_TERM_BOUNDARIES = [
+      [1,5,'小寒'],[1,20,'大寒'],[2,4,'立春'],[2,19,'雨水'],[3,5,'惊蛰'],[3,20,'春分'],
+      [4,4,'清明'],[4,20,'谷雨'],[5,5,'立夏'],[5,21,'小满'],[6,5,'芒种'],[6,21,'夏至'],
+      [7,7,'小暑'],[7,22,'大暑'],[8,7,'立秋'],[8,23,'处暑'],[9,7,'白露'],[9,23,'秋分'],
+      [10,8,'寒露'],[10,23,'霜降'],[11,7,'立冬'],[11,22,'小雪'],[12,7,'大雪'],[12,21,'冬至']
+    ];
+    function currentSolarTermName(date=new Date()){
+      const key=(date.getMonth()+1)*100+date.getDate();
+      let term='冬至';
+      SOLAR_TERM_BOUNDARIES.forEach(([month,day,name])=>{ if(month*100+day<=key) term=name; });
+      return term;
+    }
+    function getCurrentSolarTermTea(date=new Date()){
+      const term=currentSolarTermName(date);
+      return SOLAR_TERM_TEA_RECIPES.find(item=>item.term===term) || null;
+    }
+    function renderTeaCatalog(){
+      const catalog=$('#teaCatalog');
+      if(!catalog) return;
+      catalog.innerHTML=['春','夏','秋','冬'].map(season=>`<section class="tea-season"><h3>${season}季</h3><ul>${SOLAR_TERM_TEA_RECIPES.filter(item=>item.season===season).map(item=>`<li><strong>${item.term}</strong>｜${escapeHtml(item.title)}</li>`).join('')}</ul></section>`).join('');
+    }
+
+    function ingredientCategory(name){
+      if(INGREDIENT_PORTION_OVERRIDES[name]) return INGREDIENT_PORTION_OVERRIDES[name].category;
+      for(const season of Object.values(SEASONAL_INGREDIENTS)){
+        if(season.vegetables.includes(name)) return 'vegetable';
+        if(season.proteins.includes(name)) return 'protein';
+        if(season.staples.includes(name)) return 'staple';
+        if(season.seasonings.includes(name)) return 'seasoning';
+      }
+      if(/鱼|虾|鸡|鸭|鸽|牛|羊|蛋|豆腐|豆浆|蛏|蛤|蟹|墨鱼/.test(name)) return 'protein';
+      if(/米|麦|玉米|薯|芋|山药|板栗|豆$/.test(name)) return 'staple';
+      if(/菜|笋|瓜|茄|藕|菇|耳|萝卜|芹|葱|蒜|椒|草头|百合/.test(name)) return 'vegetable';
+      return null;
+    }
+    function normalizeIngredient(raw){
+      const aliases={'西红柿':'番茄','薏苡仁':'薏米','薏仁':'薏米','鸡胸':'鸡胸肉','黑木耳':'木耳','白菊花':'菊花','枸杞子':'枸杞'};
+      const clean=String(raw||'').trim().replace(/[0-9.]+\s*(克|g|kg|斤|两)?/gi,'').trim();
+      return aliases[clean]||clean;
+    }
+    function genericPortion(name,category){
+      if(category==='vegetable') return {category,grams:150,measure:'切好后约1平碗',basis:'可食部'};
+      if(category==='protein') return {category,grams:100,measure:'约1个手掌心大小',basis:'熟重'};
+      if(category==='staple') return {category,grams:75,measure:'生重约5平勺，煮后约1小碗',basis:'生重'};
+      return {category:'seasoning',grams:5,measure:'少量调味',basis:'用量上限参考'};
+    }
+    function seasonalDefaults(season){
+      const pref=$('#proteinPref').value;
+      const proteinMap={
+        '春':pref==='豆类/蛋奶'?'豆腐':pref==='禽畜适量'?'鸽肉':'鲈鱼',
+        '夏':pref==='豆类/蛋奶'?'豆腐':pref==='禽畜适量'?'鸡胸肉':'草鱼',
+        '秋':pref==='豆类/蛋奶'?'豆腐':pref==='禽畜适量'?'牛肉':'鲈鱼',
+        '冬':pref==='豆类/蛋奶'?'豆腐':pref==='禽畜适量'?'乌骨鸡':'鲫鱼'
+      };
+      const defaults={
+        '春':{vegetable:'春笋',staple:'糙米'},'夏':{vegetable:'苦瓜',staple:'糙米'},
+        '秋':{vegetable:'秋葵',staple:'黑米'},'冬':{vegetable:'白萝卜',staple:'燕麦'}
+      };
+      return {...defaults[season],protein:proteinMap[season]};
+    }
+    function renderSeasonIngredientHints(){
+      const season=$('#season').value || defaultSeasonForDate();
+      const data=SEASONAL_INGREDIENTS[season];
+      const samples=[...data.vegetables.slice(0,5),...data.proteins.slice(0,3),...data.staples.slice(0,3)];
+      seasonIngredientHints.innerHTML=`<span class="muted">${season}季可选：</span>${samples.map(item=>`<span class="ingredient-chip">${escapeHtml(item)}</span>`).join('')}`;
+    }
+    function buildSelfCookPlan(){
+      const raw=(selfIngredientsInput.value||'').split(/[，,、；;\s]+/).map(normalizeIngredient).filter(Boolean);
+      if(!raw.length){ selfcookResult.textContent='请至少输入一种想吃或家里现有的食材。'; return; }
+      const season=$('#season').value || defaultSeasonForDate();
+      const defaults=seasonalDefaults(season);
+      const recognized=[]; const unknown=[];
+      [...new Set(raw)].forEach(name=>{
+        const category=ingredientCategory(name);
+        if(category) recognized.push({name,category,source:'输入'}); else unknown.push(name);
+      });
+      ['protein','vegetable','staple'].forEach(category=>{
+        if(!recognized.some(item=>item.category===category)) recognized.push({name:defaults[category],category,source:'平台补齐'});
+      });
+      const bmi=resolveBmiInfo();
+      const factor=bmi?.label==='偏瘦'?1.1:bmi?.label==='超重'?0.9:bmi?.label==='肥胖'?0.85:1;
+      const categoryCounts=recognized.reduce((acc,item)=>{acc[item.category]=(acc[item.category]||0)+1;return acc;},{});
+      const portions=recognized.filter(item=>item.category!=='seasoning').map(item=>{
+        const base=INGREDIENT_PORTION_OVERRIDES[item.name]||genericPortion(item.name,item.category);
+        const divisor=Math.max(1,categoryCounts[item.category]||1);
+        return {...item,grams:Math.round(base.grams*factor/divisor),measure:base.measure,basis:base.basis};
+      });
+      const protein=portions.find(item=>item.category==='protein');
+      const vegetables=portions.filter(item=>item.category==='vegetable');
+      const staple=portions.find(item=>item.category==='staple');
+      const fishPattern=/鱼|虾|蛏|蛤|蟹|墨鱼/;
+      const method=fishPattern.test(protein?.name||'')?'清蒸或清炖':/豆腐|鸡蛋|鸽蛋/.test(protein?.name||'')?'清蒸或清煨':'少油快炒或清炖';
+      const dishTitle=`${method.split('或')[0]}${protein?.name||''}${vegetables[0]?.name||''}，配${staple?.name||'杂粮'}饭`;
+      const profile=profileContext();
+      const diseases=profile.carePath==='chronic'?(profile.diseases||[]):[];
+      const warnings=[];
+      if(diseases.includes('高血压')) warnings.push(`高血压：食盐按档案控制在每餐 ${profile.salt||'0.7'}g 左右，酱油和调味料一并计入`);
+      if(diseases.includes('糖尿病')) warnings.push('糖尿病：主食按生重计量，山药、土豆、芋艿也要计入主食；茶饮不额外加糖');
+      if(diseases.some(item=>item==='高脂血症'||item==='冠心病')) warnings.push(`高脂血症/冠心病：食用油按档案控制在每餐 ${profile.oil||'4-8'}g，优先蒸、炖、煮`);
+      if(diseases.includes('痛风') && portions.some(item=>/鱼|虾|蛏|蛤|蟹|蘑菇|香菇|平菇|金针菇/.test(item.name))) warnings.push('痛风：所选食材含水产或菌菇，应改用鸡蛋、适量禽肉或由营养人员确认');
+      if(diseases.includes('慢性肾病')) warnings.push('慢性肾病：蛋白质、钾和液体量需按肾功能与医嘱调整，平台只给出家庭计量参考');
+      const avoid=String(profile.avoid||'').split(/[，,、]/).map(item=>item.trim()).filter(Boolean);
+      const avoidHits=avoid.filter(term=>portions.some(item=>item.name.includes(term)||term.includes(item.name)));
+      if(avoidHits.length) warnings.push(`本次食材命中档案禁忌：${avoidHits.join('、')}`);
+      const materialRefs=[...new Set(diseases.flatMap(disease=>DISEASE_FOOD_MATERIALS[disease]||[]))].slice(0,8);
+      selfcookResult.innerHTML=`<strong>今日建议：${escapeHtml(dishTitle)}</strong>\n
+<div class="portion-table-wrap"><table class="table"><thead><tr><th>食材</th><th>建议用量</th><th>家庭量具参考</th><th>加入方式</th></tr></thead><tbody>${portions.map(item=>`<tr><td>${escapeHtml(item.name)}</td><td>${item.grams}g（${item.basis}）</td><td>${escapeHtml(item.measure)}</td><td>${item.source}</td></tr>`).join('')}</tbody></table></div>
+\n<strong>做法：</strong>${escapeHtml(method)}。蔬菜总量约150g，主食按生重称量；晚餐可在以上份量基础上再减少约10%。
+${warnings.length?`\n<strong>档案提醒：</strong>\n${warnings.map(item=>`• ${escapeHtml(item)}`).join('\n')}`:''}
+${materialRefs.length?`\n<strong>材料表中的病种食材参考：</strong>${materialRefs.map(escapeHtml).join('、')}`:''}
+${unknown.length?`\n<strong>未识别食材：</strong>${unknown.map(escapeHtml).join('、')}。这些食材保留给居民自行处理，未计入克重换算。`:''}`;
+    }
     function updateMealVisual(meal){
       const visual = MEAL_VISUALS[meal] || MEAL_VISUALS['午餐'];
       if(!mealHeroImg || !mealHeroKicker || !mealHeroTitle || !mealHeroDesc || !mealHeroTags) return;
@@ -1055,7 +1617,7 @@
       currentMealType = meal || '午餐';
       updateMealVisual(currentMealType);
       if(mealIndicator){
-        mealIndicator.textContent = `当前：${currentMealType}，自动继承上方身高/偏好设定。`;
+        mealIndicator.textContent = `当前：${currentMealType}，自动读取“我的长期档案”中的身高与偏好。`;
       }
       syncImportButtons();
       updateImportedIntakeInfo(resolveMealTargets(currentMealType));
@@ -1089,6 +1651,50 @@
       on(heightInput, ev, refreshBmi);
       on(weightInput, ev, refreshBmi);
     });
+    on(todayMenuGrid,'click',event=>{
+      const button=event.target.closest('[data-choose-menu]');
+      if(button) chooseTodayMenu(button.dataset.chooseMenu);
+    });
+    $$('.meal-switch [data-today-meal]').forEach(button=>on(button,'click',()=>{
+      currentTodayMeal=button.dataset.todayMeal;
+      $$('.meal-switch [data-today-meal]').forEach(item=>{
+        item.classList.toggle('active',item===button);
+        item.classList.toggle('secondary',item!==button);
+      });
+      renderTodayMenus();
+    }));
+    on($('#btn-save-profile'),'click',()=>{
+      const profile=saveResidentProfile();
+      if(profile) alert('居民档案已保存在当前浏览器。');
+    });
+    on($('#btn-back-today'),'click',()=>{
+      const profile=saveResidentProfile();
+      if(profile) showResidentSubtab('today');
+    });
+    on($('#btn-clear-profile'),'click',()=>{
+      if(!confirm('确定清除当前浏览器中保存的居民档案吗？')) return;
+      localStorage.removeItem(PROFILE_STORAGE_KEY);
+      [residentNameInput,residentCommunityInput,residentPhoneInput,heightInput,weightInput,$('#avoid')].forEach(input=>input.value='');
+      $('#season').value=defaultSeasonForDate();
+      $('#proteinPref').value='鱼类优先';
+      teaChips.querySelectorAll('.chip').forEach(chip=>chip.classList.remove('active'));
+      fruitChips.querySelectorAll('.chip').forEach(chip=>chip.classList.remove('active'));
+      setSingleChip(carePathChips,'healthy');
+      diseaseChips.querySelectorAll('.chip').forEach(chip=>chip.classList.remove('active'));
+      syncDiseaseSection(); refreshBmi(); updateProfileStatus(null); renderTodayMenus(); renderSeasonIngredientHints();
+    });
+    on($('#btn-selfcook-generate'),'click',buildSelfCookPlan);
+    on($('#btn-selfcook-example'),'click',()=>{
+      const season=$('#season').value||defaultSeasonForDate();
+      const defaults=seasonalDefaults(season);
+      selfIngredientsInput.value=`${defaults.protein}、${defaults.vegetable}、${defaults.staple}`;
+      buildSelfCookPlan();
+    });
+    on($('#btn-selfcook-clear'),'click',()=>{
+      selfIngredientsInput.value='';
+      selfcookResult.textContent='输入食材后，页面会给出建议菜名、每种食材用量、做法和慢病提醒。';
+    });
+    on(selfMealTypeInput,'change',()=>setMealType(selfMealTypeInput.value));
     function collectSuggestions(map, diseases){
       const seen = new Set(); const items = [];
       const keys = diseases.length ? diseases : ['一般'];
@@ -1117,7 +1723,7 @@
       if(item.excludeDiseases && item.excludeDiseases.some(d=>diseases.includes(d))) return false;
       const tags = item.tags || [];
       if(diseases.includes('糖尿病') && tags.includes('高糖')) return false;
-      if(diseases.includes('肾脏病/痛风') && tags.includes('高嘌呤')) return false;
+      if((diseases.includes('慢性肾病') || diseases.includes('痛风')) && tags.includes('高嘌呤')) return false;
       return true;
     }
     function cloneComponent(item){ return item ? JSON.parse(JSON.stringify(item)) : null; }
@@ -1378,7 +1984,7 @@
         proteinRange = [remainProtein[0]*ratio, remainProtein[1]*ratio];
         note = `已扣除：${describeConsumed(consumed)}。`;
       }else if(applyImport && !consumed.entries.length){
-        note = '尚未记录前餐摄入，暂按默认配额计算。';
+        note = '未记录前餐摄入，暂按默认配额计算。';
       }
       return {energy:energyRange, protein:proteinRange, meta:{applied:applyImport && consumed.entries.length>0, note, consumed}};
     }
@@ -1393,7 +1999,7 @@
           importedIntakeEl.textContent = '联动：未扣减前餐摄入。';
         }
       }else{
-        importedIntakeEl.textContent = '尚未导入前餐摄入';
+        importedIntakeEl.textContent = '未导入前餐摄入';
       }
     }
 
@@ -1405,25 +2011,19 @@
     function buildTeaPlan(){
       const teaPref = getTeaPref();
       if(teaPref==='unknown') return '请先在“饮茶偏好”中选择喝茶或不喝茶。';
-      if(teaPref==='no') return '已选择“不喝茶”，本时段不额外推荐茶饮。';
+      if(teaPref==='no') return '档案记录为不喝茶，食堂报餐时可选择温开水。';
       const season = $('#season').value;
       const path = currentCarePath();
       const diseases = path==='chronic' ? selectedDiseaseKeys() : [];
       const diseaseTeas = diseases.length ? collectSuggestions(TEA_SUGGESTIONS, diseases).filter(item=> !TEA_SUGGESTIONS.GEN.some(g=>g.title===item.title)).slice(0,2) : [];
-      const generalTeas = collectSuggestions(TEA_SUGGESTIONS, ['一般']).slice(0,2);
-      const seasonalTeas = (SEASONAL_TEA_RECIPES[season] || []).slice(0,2);
-      const lines = [`【${season}茶饮推荐】`];
-      if(seasonalTeas.length){
-        seasonalTeas.forEach((item,idx)=> lines.push(`${idx+1}. ${item.title}｜${item.detail}`));
-      }
+      const currentTea=getCurrentSolarTermTea();
+      const lines = [`【本期食堂固定茶饮｜${season}季】`];
+      if(currentTea) lines.push(`${currentTea.term}｜${currentTea.title}\n配方：${currentTea.detail}`);
       if(diseaseTeas.length){
-        lines.push('慢病强化：');
+        lines.push('档案对应的备选材料：');
         diseaseTeas.forEach(item=> lines.push(`- ${item.title}：${item.note}`));
-      }else if(generalTeas.length){
-        lines.push('常规舒缓：');
-        generalTeas.forEach(item=> lines.push(`- ${item.title}：${item.note}`));
       }
-      lines.push('饮用提示：每日 1-2 次，控制水温 60-80℃，如正在服药请提前咨询医生。');
+      lines.push('食堂提示：固定茶饮由食堂统一制作。正在服药、肾功能异常、孕期或对材料过敏者，请改选温开水并咨询医生。');
       return lines.join('\n');
     }
 
@@ -1647,7 +2247,7 @@
       });
       
       // 3. 根据慢病严格筛选
-      if(diseases.includes('肾脏病/痛风')) {
+      if(diseases.includes('慢性肾病') || diseases.includes('痛风')) {
         pool = pool.filter(d => {
           const tags = tagsStr(d);
           // 排除高嘌呤食物
@@ -1915,15 +2515,14 @@ ${bks[1] ? explainMenu(bks[1]) : '（无备选菜品）'}
 改良建议：
 1) HTN：以天然鲜味替代酱油，盐再降 0.1—0.2g；
 2) HLD/CHD：烹调油从 6—7g 降到 4—6g；
-3) CKD/痛风：去除海鲜/蘑菇类，豆制品选嫩豆腐、份量减半。
+3) 慢性肾病/痛风：海鲜、菌菇与豆类份量需结合检验结果和医嘱调整。
 
 生成时间：${timestamp}`;
       
       recipeEl.textContent = out;
       updateImportedIntakeInfo(dynamicTarget);
 
-      // 同步到食堂端
-      $('#canteen-menus').value = out;
+      // 家庭食谱保留在居民端，不覆盖食堂公布的固定 A/B/C 菜单。
     }
     
     // 绑定按钮事件 - 确保每次点击都触发
@@ -1934,7 +2533,7 @@ ${bks[1] ? explainMenu(bks[1]) : '（无备选菜品）'}
       setTimeout(buildMenus, 50);
     });
     on($('#btn-clear'),'click', ()=>{
-      recipeEl.textContent='（点击生成，展示套餐A/B与分项得分；可复制到食堂端）';
+      recipeEl.textContent='（点击生成，展示家庭套餐 A/B 与分项得分）';
       ['score','oilSalt','stapleProtein','diseaseFit'].forEach(id=>$('#'+id).textContent='—');
       lastGeneratedMenus = [];
       lastCompositions = [];
@@ -1950,7 +2549,12 @@ ${bks[1] ? explainMenu(bks[1]) : '（无备选菜品）'}
     };
     const presetsEl = $('#presets');
     const renderPresets = ()=>{ const s=$('#season').value; presetsEl.innerHTML = (PRESETS[s]||[]).map(p=>`<span class="pill">${p.title}</span> ${p.text}`).join('<br/>'); };
-    on($('#season'),'change', renderPresets); renderPresets();
+    on($('#season'),'change', ()=>{
+      renderPresets();
+      renderTodayMenus();
+      renderSeasonIngredientHints();
+    });
+    renderPresets();
 
     function syncImportButtons(){
       const mealValue = currentMealType;
@@ -2047,7 +2651,7 @@ ${bks[1] ? explainMenu(bks[1]) : '（无备选菜品）'}
       if(!res.ok){ const t = await res.text(); alert('调用失败：'+t); return; }
       const data = await res.json();
       const text = data.choices?.[0]?.message?.content || '(无输出)';
-      $('#recipe').textContent = text; $('#canteen-menus').value = text;
+      $('#recipe').textContent = text;
     }
     on($('#btn-call'),'click', callAI);
     on($('#btn-copy'),'click', ()=> navigator.clipboard.writeText($('#recipe').textContent||''));
@@ -2128,7 +2732,7 @@ ${bks[1] ? explainMenu(bks[1]) : '（无备选菜品）'}
       if(diseases.includes('高血压')) pool = pool.filter(item=> !/咸菜|咸蛋|腐乳/.test(item.items.join(' ')));
       if(diseases.includes('糖尿病')) pool = pool.filter(item=> !/糖|甜|白粥/.test(item.items.join(' ').replace(/无糖|低糖/g,'')));
       if(diseases.includes('高脂血症')) pool = pool.filter(item=> !/油条|酥饼/.test(item.items.join(' ')));
-      if(diseases.includes('肾脏病/痛风')) pool = pool.filter(item=> !/海带丝|海鲜/.test(item.items.join(' ')));
+      if(diseases.includes('慢性肾病') || diseases.includes('痛风')) pool = pool.filter(item=> !/海带丝|海鲜/.test(item.items.join(' ')));
       if(pref==='清淡'){
         pool = pool.sort((a,b)=> {
           const score = (str)=> (str.match(/无糖|少油|清汤|白煮/g)||[]).length;
@@ -2146,16 +2750,39 @@ ${bks[1] ? explainMenu(bks[1]) : '（无备选菜品）'}
     /******** 食堂端：订单生成 ********/
     const NAMES = ['王阿姨','张伯','李奶奶','周伯','赵阿姨','钱叔','孙奶奶','吴伯','郑阿姨','冯伯','陈叔','褚阿姨','卫奶奶','蒋伯','沈叔','韩阿姨','杨伯','朱奶奶','秦叔','尤阿姨'];
     const PHONES = ['138****1201','139****3322','137****4503','136****5614','135****6725','134****7836','133****8947','132****9058','131****0169','130****1270'];
-    const TAGS = ['高血压','糖尿病','高脂血症','冠心病','肾脏病/痛风','一般'];
+    const TAGS = ['高血压','糖尿病','高脂血症','冠心病','慢性肾病','痛风','一般'];
+    function maskPhone(phone){
+      const value=String(phone||'').replace(/\s+/g,'');
+      return value.length>=7 ? `${value.slice(0,3)}****${value.slice(-4)}` : (value||'—');
+    }
+    function refreshOrderKpis(){
+      const rows=Array.from($('#order-table tbody').querySelectorAll('tr'));
+      const tags=rows.map(row=>row.cells[4]?.textContent||'');
+      $('#kpi-total').textContent=rows.length;
+      $('#kpi-dm').textContent=tags.filter(tag=>tag.includes('糖尿病')).length;
+      $('#kpi-htn').textContent=tags.filter(tag=>tag.includes('高血压')).length;
+      $('#kpi-ldl').textContent=tags.filter(tag=>tag.includes('高脂血症')||tag.includes('冠心病')).length;
+    }
+    function upsertResidentOrder(choice){
+      const rows=$('#order-table tbody');
+      let row=rows.querySelector('tr[data-resident-choice="true"]');
+      if(!row){ row=document.createElement('tr'); row.dataset.residentChoice='true'; rows.prepend(row); }
+      const profile=readResidentProfile()||profileContext();
+      const disease=(choice.diseases||[]).join('、')||'一般';
+      row.innerHTML=`<td>居民</td><td>${escapeHtml(profile.name||'本机居民')}</td><td>${escapeHtml(maskPhone(profile.phone))}</td><td>套餐${escapeHtml(choice.code)}</td><td>${escapeHtml(disease)}</td><td>${escapeHtml(choice.meal)}｜${escapeHtml(profile.community||'到店/待确认')}</td>`;
+      Array.from(rows.children).forEach((tr,index)=>{ if(!tr.dataset.residentChoice) tr.cells[0].textContent=String(index+1); });
+      refreshOrderKpis();
+    }
     function seedOrders(){
-      const rows = $('#order-table tbody'); rows.innerHTML=''; let total=0, dm=0, htn=0, ldl=0;
+      const rows = $('#order-table tbody'); rows.innerHTML='';
+      const types=['A','B','C'];
       for(let i=0;i<18;i++){
         const name=NAMES[i%NAMES.length], phone=PHONES[i%PHONES.length];
-        const type=Math.random()>0.5?'A':'B'; const tag=TAGS[Math.floor(Math.random()*TAGS.length)];
+        const type=types[Math.floor(Math.random()*types.length)]; const tag=TAGS[Math.floor(Math.random()*TAGS.length)];
         const tr=document.createElement('tr'); tr.innerHTML = `<td>${i+1}</td><td>${name}</td><td>${phone}</td><td>套餐${type}</td><td>${tag}</td><td></td>`;
-        rows.appendChild(tr); total++; if(tag==='糖尿病') dm++; if(tag==='高血压') htn++; if(tag==='高脂血症'||tag==='冠心病') ldl++;
+        rows.appendChild(tr);
       }
-      $('#kpi-total').textContent=total; $('#kpi-dm').textContent=dm; $('#kpi-htn').textContent=htn; $('#kpi-ldl').textContent=ldl;
+      refreshOrderKpis();
     }
     on($('#btn-seed-orders'),'click', seedOrders);
     on($('#btn-clear-orders'),'click', ()=>{ $('#order-table tbody').innerHTML=''; ['kpi-total','kpi-dm','kpi-htn','kpi-ldl'].forEach(id=> $('#'+id).textContent='0'); });
@@ -2169,13 +2796,25 @@ ${bks[1] ? explainMenu(bks[1]) : '（无备选菜品）'}
       rows.forEach((tr,i)=>{
         const cells=tr.querySelectorAll('td'); const type=cells[3].textContent; const tag=cells[4].textContent;
         const v=villages[i%villages.length], b=blocks[i%blocks.length]; const key=groupKey==='小区'? v:(v+' '+b);
-        groups[key] ||= {A:0,B:0,notes:[]}; if(type.includes('A')) groups[key].A++; else groups[key].B++; if(tag!=='一般') groups[key].notes.push(tag);
+        groups[key] ||= {A:0,B:0,C:0,notes:[]};
+        if(type.includes('A')) groups[key].A++; else if(type.includes('B')) groups[key].B++; else groups[key].C++;
+        if(tag!=='一般') groups[key].notes.push(tag);
       });
-      let lines=[]; Object.entries(groups).forEach(([k,v])=>{ const extra = v.notes.length? `｜特殊：${Array.from(new Set(v.notes)).join('、')}` : ''; lines.push(`${k}：A×${v.A}，B×${v.B} ${extra}`); });
+      let lines=[]; Object.entries(groups).forEach(([k,v])=>{ const extra = v.notes.length? `｜特殊：${Array.from(new Set(v.notes)).join('、')}` : ''; lines.push(`${k}：A×${v.A}，B×${v.B}，C×${v.C} ${extra}`); });
       $('#routes').textContent = lines.join('\n');
     }
     on($('#btn-build-routes'),'click', buildRoutes);
     on($('#btn-copy-routes'),'click', ()=> navigator.clipboard.writeText($('#routes').textContent||''));
+
+    /******** 首次载入 ********/
+    applyResidentProfile(readResidentProfile());
+    syncDiseaseSection();
+    renderPresets();
+    renderTodayMenus();
+    renderSeasonIngredientHints();
+    renderTeaCatalog();
+    const savedChoice=(()=>{ try{return JSON.parse(localStorage.getItem(CANTEEN_CHOICE_KEY)||'null');}catch(_err){return null;} })();
+    if(savedChoice && savedChoice.date===todayKey()) upsertResidentOrder(savedChoice);
   </script>
 </body>
 </html>
